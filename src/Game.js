@@ -177,19 +177,12 @@ export class Game {
     this.camera.setMapBounds(this.tileMap.widthPx, this.tileMap.heightPx);
     this.camera.x = this.player.getCenterX() - VIEWPORT_WIDTH / 2;
     this.camera.y = this.player.getCenterY() - VIEWPORT_HEIGHT / 2;
-    this.camera.targetZoom = 0.8;
-    this.camera.zoom = 0.8;
+    this.camera.targetZoom = 0.4;
+    this.camera.zoom = 0.4;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
-    // Set camera mode
-    if (this.levelConfig.cameraMode === 'STATIC_PAN') {
-      const mapCenterX = (this.levelConfig.mapWidth * TILE_SIZE) / 2;
-      const mapCenterY = (this.levelConfig.mapHeight * TILE_SIZE) / 2;
-      const panRange = Math.min(this.levelConfig.mapWidth, this.levelConfig.mapHeight) * TILE_SIZE * 0.15;
-      this.camera.setStaticPan(mapCenterX, mapCenterY, panRange, panRange * 0.5, 0.25);
-    } else {
-      this.camera.setFollowMode();
-    }
+    // Always follow the player
+    this.camera.setFollowMode();
 
     this.fireRenderer.clear();
     this.trailRenderer.clear();
@@ -376,8 +369,8 @@ export class Game {
       });
       this.soundManager.playIgnition();
 
-      this.camera.zoomTo(0.85);
-      setTimeout(() => this.camera.zoomTo(0.8), 300);
+      this.camera.zoomTo(0.45);
+      setTimeout(() => this.camera.zoomTo(0.4), 300);
     }
     this.camera.follow(this.player);
     this.camera.update(dt);
@@ -698,7 +691,7 @@ export class Game {
             1, { r: 255, g: 255, b: 100, life: 0.8, spread: 45 }
           );
         }
-        if (t < 0.5) this.camera.zoomTo(0.75);
+        if (t < 0.5) this.camera.zoomTo(0.35);
         break;
 
       case 'SAFE_OUT':

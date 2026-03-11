@@ -15,8 +15,8 @@ export const FIRE_STATE = {
 export class Player extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 42;
-    this.height = 42;
+    this.width = 24;
+    this.height = 48;
 
     this.fireState = FIRE_STATE.NOT_LIT;
     this.gel = GEL_MAX;
@@ -127,96 +127,101 @@ export class Player extends Entity {
 
   _renderLayingDown(ctx, sx, sy) {
     ctx.save();
-    const grad = ctx.createLinearGradient(sx, sy + 12, sx + 42, sy + 36);
+    const cx = sx + 12;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx, sy + 38, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body lying flat
+    const grad = ctx.createLinearGradient(sx - 6, sy + 20, sx + 30, sy + 34);
     grad.addColorStop(0, '#3a3a4a');
     grad.addColorStop(1, '#2a2a3a');
     ctx.fillStyle = grad;
-    this._roundRect(ctx, sx, sy + 12, 42, 24, 6);
+    this._roundRect(ctx, sx - 6, sy + 22, 36, 12, 4);
+    // Head
     ctx.fillStyle = '#4a4a5a';
-    this._roundRect(ctx, sx + 2, sy + 14, 16, 14, 5);
+    this._roundRect(ctx, sx - 8, sy + 24, 10, 10, 4);
+    // Visor
     ctx.fillStyle = '#2299aa';
-    this._roundRect(ctx, sx + 5, sy + 18, 10, 5, 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(sx + 21, sy + 39, 20, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    this._roundRect(ctx, sx - 6, sy + 27, 6, 4, 2);
     ctx.restore();
   }
 
   _renderStanding(ctx, sx, sy) {
     ctx.save();
-    const b = Math.sin(this.breatheTimer * 2) * 1.5;
+    const cx = sx + 12;
+    const b = Math.sin(this.breatheTimer * 2) * 1;
 
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(sx + 21, sy + 42, 15, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, sy + 48, 9, 3, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Boots
-    const ls = this.isMoving ? Math.sin(this.animTimer * 40) * 5 : 0;
-    ctx.fillStyle = '#1a1a2a';
-    this._roundRect(ctx, sx + 7, sy + 34 + ls * 0.3, 11, 8, 3);
-    this._roundRect(ctx, sx + 24, sy + 34 - ls * 0.3, 11, 8, 3);
+    const ls = this.isMoving ? Math.sin(this.animTimer * 40) * 4 : 0;
 
-    // Legs - armored plating
-    const legG = ctx.createLinearGradient(sx + 8, sy + 26, sx + 34, sy + 36);
+    // Boots
+    ctx.fillStyle = '#1a1a2a';
+    this._roundRect(ctx, sx + 2, sy + 41 + ls * 0.3, 7, 6, 2);
+    this._roundRect(ctx, sx + 15, sy + 41 - ls * 0.3, 7, 6, 2);
+
+    // Legs - slim
+    const legG = ctx.createLinearGradient(sx + 3, sy + 30, sx + 21, sy + 42);
     legG.addColorStop(0, '#3a3a4a');
     legG.addColorStop(1, '#2a2a3a');
     ctx.fillStyle = legG;
-    this._roundRect(ctx, sx + 9, sy + 26 + ls * 0.3, 9, 11, 3);
-    this._roundRect(ctx, sx + 24, sy + 26 - ls * 0.3, 9, 11, 3);
+    this._roundRect(ctx, sx + 3, sy + 30 + ls * 0.3, 6, 13, 2);
+    this._roundRect(ctx, sx + 15, sy + 30 - ls * 0.3, 6, 13, 2);
 
-    // Torso - power suit
-    const bodyG = ctx.createLinearGradient(sx + 5, sy + 10, sx + 37, sy + 28);
+    // Torso - slim power suit
+    const bodyG = ctx.createLinearGradient(sx + 1, sy + 14, sx + 23, sy + 32);
     bodyG.addColorStop(0, '#444455');
     bodyG.addColorStop(0.4, '#555566');
     bodyG.addColorStop(1, '#2a2a3a');
     ctx.fillStyle = bodyG;
-    this._roundRect(ctx, sx + 5, sy + 10 + b, 32, 18, 5);
+    this._roundRect(ctx, sx + 1, sy + 14 + b, 22, 18, 4);
 
     // Chest plate
-    const cpG = ctx.createLinearGradient(sx + 10, sy + 12, sx + 32, sy + 24);
-    cpG.addColorStop(0, '#555566');
-    cpG.addColorStop(1, '#444455');
-    ctx.fillStyle = cpG;
-    this._roundRect(ctx, sx + 10, sy + 12 + b, 22, 12, 3);
+    ctx.fillStyle = '#555566';
+    this._roundRect(ctx, sx + 4, sy + 16 + b, 16, 10, 2);
 
     // Orange accent stripes
     ctx.fillStyle = '#cc6600';
     ctx.globalAlpha = 0.8;
-    ctx.fillRect(sx + 8, sy + 14 + b, 26, 2);
-    ctx.fillRect(sx + 8, sy + 22 + b, 26, 2);
+    ctx.fillRect(sx + 3, sy + 18 + b, 18, 1.5);
+    ctx.fillRect(sx + 3, sy + 24 + b, 18, 1.5);
     ctx.globalAlpha = 1;
 
-    // Shoulder pads
+    // Shoulder pads - small
     ctx.fillStyle = '#4a4a5a';
-    this._roundRect(ctx, sx + 1, sy + 10 + b, 8, 11, 4);
-    this._roundRect(ctx, sx + 33, sy + 10 + b, 8, 11, 4);
+    this._roundRect(ctx, sx - 2, sy + 14 + b, 6, 7, 3);
+    this._roundRect(ctx, sx + 20, sy + 14 + b, 6, 7, 3);
 
-    // Arms
-    const as = this.isMoving ? Math.sin(this.animTimer * 40) * 4 : 0;
+    // Arms - slim
+    const as = this.isMoving ? Math.sin(this.animTimer * 40) * 3 : 0;
     ctx.fillStyle = '#3a3a4a';
-    ctx.fillRect(sx + 2, sy + 15 + b - as * 0.3, 5, 13);
-    ctx.fillRect(sx + 35, sy + 15 + b + as * 0.3, 5, 13);
+    this._roundRect(ctx, sx - 1, sy + 18 + b - as * 0.3, 4, 12, 1);
+    this._roundRect(ctx, sx + 21, sy + 18 + b + as * 0.3, 4, 12, 1);
+    // Gloves
     ctx.fillStyle = '#1a1a2a';
-    this._roundRect(ctx, sx + 2, sy + 26 + b, 5, 3, 1);
-    this._roundRect(ctx, sx + 35, sy + 26 + b, 5, 3, 1);
+    this._roundRect(ctx, sx - 1, sy + 28 + b, 4, 3, 1);
+    this._roundRect(ctx, sx + 21, sy + 28 + b, 4, 3, 1);
 
     // Neck
     ctx.fillStyle = '#333344';
-    ctx.fillRect(sx + 16, sy + 6 + b, 10, 6);
+    ctx.fillRect(sx + 9, sy + 10 + b, 6, 5);
 
-    // Helmet
-    const hG = ctx.createRadialGradient(sx + 21, sy + 2, 2, sx + 21, sy + 4, 14);
+    // Helmet - proportional
+    const hG = ctx.createRadialGradient(cx, sy + 4, 1, cx, sy + 5, 10);
     hG.addColorStop(0, '#5a5a6a');
     hG.addColorStop(0.6, '#3e3e4e');
     hG.addColorStop(1, '#2a2a3a');
     ctx.fillStyle = hG;
-    this._roundRect(ctx, sx + 9, sy - 6, 24, 17, 7);
+    this._roundRect(ctx, sx + 2, sy - 4, 20, 16, 6);
 
     // Visor
-    const vG = ctx.createLinearGradient(sx + 12, sy - 1, sx + 30, sy + 8);
+    const vG = ctx.createLinearGradient(sx + 4, sy + 1, sx + 20, sy + 8);
     vG.addColorStop(0, '#115566');
     vG.addColorStop(0.3, '#2299aa');
     vG.addColorStop(0.5, '#33bbcc');
@@ -224,28 +229,28 @@ export class Player extends Entity {
     vG.addColorStop(1, '#115566');
     ctx.fillStyle = vG;
     if (this.facingY > 0.3) {
-      this._roundRect(ctx, sx + 12, sy + 1, 18, 7, 3);
+      this._roundRect(ctx, sx + 5, sy + 2, 14, 6, 3);
       ctx.fillStyle = 'rgba(150,255,255,0.3)';
-      this._roundRect(ctx, sx + 14, sy + 2, 8, 3, 1);
+      this._roundRect(ctx, sx + 6, sy + 3, 6, 2, 1);
     } else if (this.facingY < -0.3) {
       ctx.fillStyle = '#3a3a4a';
-      this._roundRect(ctx, sx + 12, sy - 1, 18, 5, 3);
+      this._roundRect(ctx, sx + 5, sy + 1, 14, 4, 3);
     } else {
-      const vx = this.facingX < 0 ? sx + 10 : sx + 16;
-      this._roundRect(ctx, vx, sy, 15, 7, 3);
+      const vx = this.facingX < 0 ? sx + 3 : sx + 9;
+      this._roundRect(ctx, vx, sy + 2, 12, 6, 3);
       ctx.fillStyle = 'rgba(150,255,255,0.3)';
-      this._roundRect(ctx, vx + 2, sy + 1, 6, 3, 1);
+      this._roundRect(ctx, vx + 2, sy + 3, 4, 2, 1);
     }
 
     // Helmet light
     const pulse = this.isOnFire() ? Math.sin(this.breatheTimer * 4) * 0.3 + 0.7 : 0.3;
     ctx.fillStyle = `rgba(255,120,0,${pulse})`;
     ctx.beginPath();
-    ctx.arc(sx + 21, sy - 4, 2, 0, Math.PI * 2);
+    ctx.arc(cx, sy - 2, 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = `rgba(255,120,0,${pulse * 0.3})`;
     ctx.beginPath();
-    ctx.arc(sx + 21, sy - 4, 5, 0, Math.PI * 2);
+    ctx.arc(cx, sy - 2, 4, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

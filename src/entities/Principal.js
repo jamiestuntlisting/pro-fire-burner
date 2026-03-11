@@ -24,9 +24,9 @@ export class Principal extends Extra {
     const sx = Math.floor(screen.x);
     const sy = Math.floor(screen.y);
 
-    const bobOffset = Math.sin(this.starBob) * 6;
-    const starCx = sx + 18;
-    const starCy = sy - 24 + bobOffset;
+    const bobOffset = Math.sin(this.starBob) * 4;
+    const starCx = sx + 10;
+    const starCy = sy - 16 + bobOffset;
 
     ctx.save();
 
