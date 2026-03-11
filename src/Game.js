@@ -443,6 +443,9 @@ export class Game {
       this._checkPlayingCollisions(dt);
     }
 
+    // Pickup collection - always active, not just when on fire
+    this._checkPickupCollection();
+
     // Lay down mechanic
     if (this.input.actionJustPressed && this.player.isOnFire()) {
       if (this.player.layDown()) {
@@ -505,6 +508,33 @@ export class Game {
     }
 
     this.camera.shake(4, 0.5);
+  }
+
+  _checkPickupCollection() {
+    // Use distance-based collection with generous radius
+    // Visual pickup center is at (x+18, y+18), not (x+32, y+32)
+    const playerCX = this.player.x + this.player.width / 2;
+    const playerCY = this.player.y + this.player.height / 2;
+    const pickupRadius = 52;
+
+    for (const entity of this.entities) {
+      if (entity.dead || !(entity instanceof Pickup)) continue;
+      // Match the visual center of the pickup sprite (rendered at x+18, y+18)
+      const pickupCX = entity.x + 18;
+      const pickupCY = entity.y + 18;
+      const dx = playerCX - pickupCX;
+      const dy = playerCY - pickupCY;
+      if (dx * dx + dy * dy < pickupRadius * pickupRadius) {
+        if (entity.type === PICKUP_TYPE.GEL) {
+          this.player.addGel();
+          this.soundManager.playGelPickup();
+        } else {
+          this.player.addFuel();
+          this.soundManager.playFuelPickup();
+        }
+        entity.collect();
+      }
+    }
   }
 
   _checkFireSpread(px, py) {
@@ -619,29 +649,6 @@ export class Game {
         this.camera.shake(4, 0.3);
         this.player.resetCombo();
         this.soundManager.playHit();
-      }
-    }
-
-    // Use distance-based pickup collection for a generous catch radius
-    const playerCX = this.player.x + this.player.width / 2;
-    const playerCY = this.player.y + this.player.height / 2;
-    const pickupRadius = 48; // generous catch distance in pixels
-
-    for (const entity of this.entities) {
-      if (entity.dead || !(entity instanceof Pickup)) continue;
-      const pickupCX = entity.x + entity.width / 2;
-      const pickupCY = entity.y + entity.height / 2;
-      const dx = playerCX - pickupCX;
-      const dy = playerCY - pickupCY;
-      if (dx * dx + dy * dy < pickupRadius * pickupRadius) {
-        if (entity.type === PICKUP_TYPE.GEL) {
-          this.player.addGel();
-          this.soundManager.playGelPickup();
-        } else {
-          this.player.addFuel();
-          this.soundManager.playFuelPickup();
-        }
-        entity.collect();
       }
     }
 
