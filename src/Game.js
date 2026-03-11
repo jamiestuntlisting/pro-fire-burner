@@ -30,18 +30,30 @@ import { PASwarm } from './entities/PASwarm.js';
 import { StuntCoordinator } from './entities/StuntCoordinator.js';
 import { CountdownTimer } from './utils/timer.js';
 import { distance } from './utils/math.js';
-import { addHighScore } from './utils/storage.js';
 
 const STATES = {
   MENU: 'MENU',
+  NAME_ENTRY: 'NAME_ENTRY',
   CALL_SHEET: 'CALL_SHEET',
   COUNTDOWN: 'COUNTDOWN',
   PLAYING: 'PLAYING',
+  END_ANIMATION: 'END_ANIMATION',
   PA_ATTACK: 'PA_ATTACK',
   LEVEL_COMPLETE: 'LEVEL_COMPLETE',
   GAME_OVER: 'GAME_OVER',
   HIGH_SCORE: 'HIGH_SCORE',
   ADMIN_PANEL: 'ADMIN_PANEL',
+};
+
+// End animation configs per reason
+const END_ANIMS = {
+  BURNED: { duration: 1.5, label: 'BURNED UP!' },
+  EXTINGUISHED: { duration: 1.5, label: 'PUT OUT!' },
+  SPLASHDOWN: { duration: 1.5, label: 'SPLASHDOWN!' },
+  ROADKILL: { duration: 1.2, label: 'ROADKILL!' },
+  LOST_THE_SHOT: { duration: 1.2, label: 'LOST THE SHOT!' },
+  CLEAN_BURN: { duration: 2.0, label: 'CLEAN BURN!' },
+  SAFE_OUT: { duration: 1.5, label: 'SAFE OUT!' },
 };
 
 export class Game {
@@ -69,7 +81,7 @@ export class Game {
     this.gameOverScreen = new GameOverScreen();
     this.highScoreBoard = new HighScoreBoard();
 
-    // Stunt coordinator (always present during gameplay)
+    // Stunt coordinator
     this.stuntCoordinator = new StuntCoordinator();
 
     // Game state
@@ -84,9 +96,13 @@ export class Game {
     this.levelTimer = null;
     this.endReason = null;
 
+    // End animation state
+    this.endAnimTimer = 0;
+    this.endAnimDuration = 1.5;
+
     // Fade transition
     this.fadeAlpha = 0;
-    this.fadeDirection = 0; // 0=none, 1=fading out, -1=fading in
+    this.fadeDirection = 0;
     this.fadeCallback = null;
 
     // Hit-stop
@@ -96,13 +112,15 @@ export class Game {
     this.accumulator = 0;
     this.lastTime = 0;
     this.running = false;
+
+    // Player name (entered at start)
+    this.playerName = '';
   }
 
   async init() {
     await this.levelManager.loadLevels();
     this.soundManager.init();
 
-    // Key listener for konami code
     window.addEventListener('keydown', (e) => {
       this.mainMenu.checkKonami(e.code);
     });
@@ -163,7 +181,7 @@ export class Game {
     this.camera.zoom = 1.0;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
-    // Set camera mode based on level config
+    // Set camera mode
     if (this.levelConfig.cameraMode === 'STATIC_PAN') {
       const mapCenterX = (this.levelConfig.mapWidth * TILE_SIZE) / 2;
       const mapCenterY = (this.levelConfig.mapHeight * TILE_SIZE) / 2;
@@ -177,22 +195,20 @@ export class Game {
     this.trailRenderer.clear();
     this.particles.clear();
 
-    // Find film camera
     this.filmCamera = this.entities.find(e => e instanceof FilmCamera) || null;
 
-    // Level timer for MARK levels
     if (this.levelConfig.timeLimit > 0) {
       this.levelTimer = new CountdownTimer(this.levelConfig.timeLimit);
     } else {
       this.levelTimer = null;
     }
 
-    // Reset stunt coordinator
     this.stuntCoordinator = new StuntCoordinator();
+    this.hud.resetGoalBanner();
   }
 
   endLevel(reason) {
-    if (this.endReason) return; // Already ending
+    if (this.endReason) return;
     this.endReason = reason;
 
     if (reason === 'PA_ATTACK') {
@@ -203,30 +219,35 @@ export class Game {
       return;
     }
 
-    this.player.extinguish();
-    const info = END_REASONS[reason];
+    // Don't extinguish or cut away yet - play end animation first
+    const animConfig = END_ANIMS[reason] || { duration: 1.5, label: reason };
+    this.endAnimTimer = 0;
+    this.endAnimDuration = animConfig.duration;
+    this.state = STATES.END_ANIMATION;
 
+    // Play sounds immediately
     if (reason === 'SPLASHDOWN') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 30, {
         r: 100, g: 150, b: 255, life: 1.0, spread: 50,
       });
       this.soundManager.playSplash();
-    } else if (reason === 'EXTINGUISHED' || reason === 'SAFE_OUT') {
-      this.soundManager.playExtinguish();
     } else if (reason === 'CLEAN_BURN') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 20, {
         r: 255, g: 255, b: 100, life: 1.5, spread: 30,
       });
     }
 
+    const info = END_REASONS[reason];
     if (info && info.isGameOver) {
       this.soundManager.playGameOver();
       this.camera.shake(3, 0.3);
     }
 
-    this.fadeToState(info && info.isGameOver ? STATES.GAME_OVER : STATES.LEVEL_COMPLETE, () => {
-      this.gameOverScreen.setup(reason, this.player, this.filmCamera, this.levelConfig);
-    });
+    // Extinguish player visually for relevant reasons
+    if (reason === 'EXTINGUISHED' || reason === 'SPLASHDOWN' || reason === 'SAFE_OUT') {
+      this.player.extinguish();
+      this.soundManager.playExtinguish();
+    }
   }
 
   // --- UPDATE ---
@@ -251,6 +272,9 @@ export class Game {
       case STATES.MENU:
         this._updateMenu(dt);
         break;
+      case STATES.NAME_ENTRY:
+        this._updateNameEntry(dt);
+        break;
       case STATES.CALL_SHEET:
         this._updateCallSheet(dt);
         break;
@@ -259,6 +283,9 @@ export class Game {
         break;
       case STATES.PLAYING:
         this._updatePlaying(dt);
+        break;
+      case STATES.END_ANIMATION:
+        this._updateEndAnimation(dt);
         break;
       case STATES.PA_ATTACK:
         this._updatePAAttack(dt);
@@ -277,9 +304,10 @@ export class Game {
     const choice = this.mainMenu.update(dt, this.input);
     if (choice === 'NEW GAME') {
       this.levelManager.setLevel(0);
-      this.fadeToState(STATES.CALL_SHEET, () => {
-        this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
-      });
+      this.playerName = '';
+      this._nameEntryKeys = {};
+      this._nameBackspaceHeld = false;
+      this.fadeToState(STATES.NAME_ENTRY, () => {});
     } else if (choice === 'HIGH SCORES') {
       this.fadeToState(STATES.HIGH_SCORE, () => {
         this.highScoreBoard.refresh();
@@ -287,6 +315,34 @@ export class Game {
     } else if (choice === 'ADMIN') {
       this.state = STATES.ADMIN_PANEL;
       this._openAdmin();
+    }
+  }
+
+  _updateNameEntry(dt) {
+    // Listen for key presses for name
+    for (const [code, pressed] of Object.entries(this.input.keys)) {
+      if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
+        const letter = code.replace('Key', '');
+        if (!this._nameEntryKeys[code]) {
+          this.playerName += letter;
+        }
+        this._nameEntryKeys[code] = true;
+      } else if (!pressed) {
+        this._nameEntryKeys[code] = false;
+      }
+    }
+    if (this.input.keys['Backspace']) {
+      if (!this._nameBackspaceHeld) {
+        this.playerName = this.playerName.slice(0, -1);
+        this._nameBackspaceHeld = true;
+      }
+    } else {
+      this._nameBackspaceHeld = false;
+    }
+    if (this.input.enterJustPressed && this.playerName.length > 0) {
+      this.fadeToState(STATES.CALL_SHEET, () => {
+        this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
+      });
     }
   }
 
@@ -315,13 +371,11 @@ export class Game {
       if (this.levelTimer) this.levelTimer.start();
       if (this.cameraCar) this.cameraCar.activate();
 
-      // Ignition burst
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 40, {
         r: 255, g: 150, b: 0, life: 0.8, spread: 60,
       });
       this.soundManager.playIgnition();
 
-      // Brief zoom
       this.camera.zoomTo(1.05);
       setTimeout(() => this.camera.zoomTo(1.0), 300);
     }
@@ -330,20 +384,14 @@ export class Game {
   }
 
   _updatePlaying(dt) {
-    // Update tilemap
     this.tileMap.update(dt);
-
-    // Update player
     this.player.update(dt, this.input, this.collisionSystem);
 
-    // Update camera
     this.camera.follow(this.player);
     this.camera.update(dt);
 
-    // Rebuild spatial hash
     this.spatialHash.rebuild(this.entities);
 
-    // Update entities and tell fire safeties where the player is
     const px = this.player.getCenterX();
     const py = this.player.getCenterY();
 
@@ -355,19 +403,15 @@ export class Game {
         entity.update(dt);
       } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
-      } else if (entity instanceof FilmCamera) {
-        entity.update(dt);
       } else {
         entity.update(dt);
       }
     }
 
-    // Camera car
     if (this.cameraCar && this.cameraCar.active) {
       this.cameraCar.update(dt, this.player.y);
     }
 
-    // Level timer
     if (this.levelTimer) {
       this.levelTimer.update(dt);
       if (this.levelTimer.isExpired()) {
@@ -376,7 +420,6 @@ export class Game {
       }
     }
 
-    // --- Collision checks ---
     if (this.player.isOnFire()) {
       this._checkPlayingCollisions(dt);
     }
@@ -384,7 +427,6 @@ export class Game {
     // Lay down mechanic
     if (this.input.actionJustPressed && this.player.isOnFire()) {
       if (this.player.layDown()) {
-        // Find nearest fire safety to come help
         const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
         if (safeties.length > 0) {
           let nearest = null;
@@ -403,7 +445,6 @@ export class Game {
       }
     }
 
-    // Lay down timer - check for fire safety arrival
     if (this.player.isLayingDown()) {
       const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
       for (const s of safeties) {
@@ -412,35 +453,29 @@ export class Game {
           return;
         }
       }
-      // If no safeties or after 3 seconds, just get up
       if (this.player.layDownTimer > 3.0) {
         this.player.fireState = FIRE_STATE.ON_FIRE;
         this.player.inputLocked = false;
       }
     }
 
-    // Fire rendering
     const intensity = this.player.getFlameIntensity();
     this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
     this.trailRenderer.update(dt, this.player.x, this.player.y, this.player.isMoving, intensity);
     this.particles.update(dt);
 
-    // Update stunt coordinator
     this.stuntCoordinator.update(dt, this.player.isMoving);
 
-    // Check end conditions
     if (this.player.gel <= 0) {
       this.endLevel('BURNED');
     } else if (this.player.fuel <= 0) {
       this.endLevel('CLEAN_BURN');
     }
 
-    // Water check
     if (this.collisionSystem.isOnWater(this.player) && this.player.isOnFire()) {
       this.endLevel('SPLASHDOWN');
     }
 
-    // Remove dead entities
     this.entities = this.entities.filter(e => !e.dead);
   }
 
@@ -448,7 +483,6 @@ export class Game {
     const px = this.player.getCenterX();
     const py = this.player.getCenterY();
 
-    // Pending end reasons (for same-tick priority)
     let pendingEnd = null;
     let pendingPriority = 99;
 
@@ -460,13 +494,18 @@ export class Game {
       }
     };
 
-    // Fire safeties - spray cone check
+    // Fire safeties - spray accelerates fuel loss instead of instant extinguish
     for (const entity of this.entities) {
       if (entity.dead) continue;
 
       if (entity instanceof FireSafety) {
         if (entity.isPlayerInSpray(px, py)) {
-          tryEnd('EXTINGUISHED');
+          // Accelerate fuel drain instead of instant kill
+          this.player.fuel -= entity.fuelDrainRate * dt;
+          this.player.fuel = Math.max(0, this.player.fuel);
+          // Also drain some gel
+          this.player.gel -= entity.fuelDrainRate * 0.3 * dt;
+          this.player.gel = Math.max(0, this.player.gel);
         }
       }
     }
@@ -508,7 +547,6 @@ export class Game {
             this.player.resetCombo();
             this.hitStopFrames = 4;
             this.soundManager.playPanic();
-            // Floating text particle
             this.particles.emitBurst(entity.getCenterX(), entity.getCenterY() - 8, 3, {
               r: 255, g: 50, b: 50, vy: -20, life: 1.5, size: 1, spread: 5,
             });
@@ -517,7 +555,7 @@ export class Game {
       }
     }
 
-    // Torches - proximity drain
+    // Torches
     let maxDrainMult = 1.0;
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof Torch)) continue;
@@ -556,9 +594,137 @@ export class Game {
       }
     }
 
-    // Resolve pending end
     if (pendingEnd) {
       this.endLevel(pendingEnd);
+    }
+  }
+
+  _updateEndAnimation(dt) {
+    this.endAnimTimer += dt;
+
+    // Keep updating rendering during end animation
+    this.camera.update(dt);
+    this.particles.update(dt);
+
+    // Keep fire rendering going for burn-related ends
+    if (this.player.isOnFire()) {
+      const intensity = this.player.getFlameIntensity();
+      this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+    }
+
+    // Keep entities moving during end animation
+    for (const entity of this.entities) {
+      if (entity.dead) continue;
+      if (entity instanceof FireSafety) {
+        entity.setPlayerPosition(this.player.getCenterX(), this.player.getCenterY());
+        entity.update(dt);
+      } else if (entity instanceof Extra || entity instanceof Principal) {
+        entity.update(dt, this.tileMap);
+      } else {
+        entity.update(dt);
+      }
+    }
+
+    // Reason-specific animations during the delay
+    this._playEndReasonAnimation(dt);
+
+    // After animation completes, transition
+    if (this.endAnimTimer >= this.endAnimDuration) {
+      // Now extinguish if we haven't already
+      if (this.player.isOnFire()) {
+        this.player.extinguish();
+      }
+
+      const info = END_REASONS[this.endReason];
+      this.fadeToState(info && info.isGameOver ? STATES.GAME_OVER : STATES.LEVEL_COMPLETE, () => {
+        this.gameOverScreen.setup(this.endReason, this.player, this.filmCamera, this.levelConfig, this.playerName);
+      });
+    }
+  }
+
+  _playEndReasonAnimation(dt) {
+    const px = this.player.getCenterX();
+    const py = this.player.getCenterY();
+    const t = this.endAnimTimer;
+
+    switch (this.endReason) {
+      case 'BURNED':
+        // Char/smoke particles rising
+        if (Math.random() < 0.3) {
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 10, py, 1, {
+            r: 80, g: 80, b: 80, life: 1.0, spread: 8, vy: -30,
+          });
+        }
+        if (t > 0.5 && t < 0.6) {
+          this.player.extinguish();
+        }
+        break;
+
+      case 'EXTINGUISHED':
+        // Steam/fog rising from player
+        if (Math.random() < 0.4) {
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 8, py - 5, 1, {
+            r: 200, g: 220, b: 240, life: 0.8, spread: 5, vy: -20,
+          });
+        }
+        break;
+
+      case 'SPLASHDOWN':
+        // Water ripple bursts
+        if (t < 0.3 && Math.random() < 0.5) {
+          this.particles.emitBurst(px, py, 2, {
+            r: 100, g: 150, b: 255, life: 0.6, spread: 20,
+          });
+        }
+        break;
+
+      case 'ROADKILL':
+        // Impact shake
+        if (t < 0.3) {
+          this.camera.shake(5, 0.1);
+        }
+        // Debris
+        if (t < 0.2 && Math.random() < 0.5) {
+          this.particles.emitBurst(px, py, 3, {
+            r: 150, g: 120, b: 80, life: 0.8, spread: 30,
+          });
+        }
+        break;
+
+      case 'LOST_THE_SHOT':
+        // Film strip particles
+        if (Math.random() < 0.2) {
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 20, py - 10, 1, {
+            r: 50, g: 50, b: 50, life: 1.0, spread: 10,
+          });
+        }
+        break;
+
+      case 'CLEAN_BURN':
+        // Victory sparkles
+        if (Math.random() < 0.4) {
+          this.particles.emitBurst(
+            px + (Math.random() - 0.5) * 20,
+            py + (Math.random() - 0.5) * 20,
+            1, {
+              r: 255, g: 255, b: 100, life: 0.8, spread: 15,
+            }
+          );
+        }
+        // Slow zoom out
+        if (t < 0.5) {
+          this.camera.zoomTo(0.95);
+        }
+        break;
+
+      case 'SAFE_OUT':
+        // Thumbs up sparkle
+        if (Math.random() < 0.3) {
+          this.particles.emitBurst(px, py - 15, 1, {
+            r: 100, g: 255, b: 100, life: 0.6, spread: 8,
+          });
+        }
+        break;
     }
   }
 
@@ -568,10 +734,9 @@ export class Game {
       this.camera.update(dt);
       if (this.paSwarm.done) {
         this.fadeToState(STATES.GAME_OVER, () => {
-          this.gameOverScreen.setup('PA_ATTACK', this.player, this.filmCamera, this.levelConfig);
+          this.gameOverScreen.setup('PA_ATTACK', this.player, this.filmCamera, this.levelConfig, this.playerName);
         });
       }
-      // Ongoing shake during beating
       if (this.paSwarm.phase === 'BEATING') {
         this.camera.shake(3, 0.1);
       }
@@ -582,20 +747,12 @@ export class Game {
     const result = this.gameOverScreen.update(dt, this.input);
     if (!result) return;
 
-    if (result.action === 'SAVE_SCORE') {
-      addHighScore({
-        playerName: result.name,
-        totalScore: result.score,
-        highestLevel: this.levelConfig.id,
-        date: new Date().toISOString(),
-      });
-    } else if (result.action === 'NEXT_LEVEL') {
+    if (result.action === 'NEXT_LEVEL') {
       if (this.levelManager.nextLevel()) {
         this.fadeToState(STATES.CALL_SHEET, () => {
           this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
         });
       } else {
-        // Beat all levels!
         this.fadeToState(STATES.MENU, () => {});
       }
     } else if (result.action === 'RETRY') {
@@ -625,6 +782,9 @@ export class Game {
       case STATES.MENU:
         this.mainMenu.render(ctx);
         break;
+      case STATES.NAME_ENTRY:
+        this._renderNameEntry(ctx);
+        break;
       case STATES.CALL_SHEET:
         this.callSheet.render(ctx);
         break;
@@ -635,8 +795,12 @@ export class Game {
       case STATES.PLAYING:
         this._renderLevel(ctx);
         this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
-        // Stunt coordinator overlay (screen-space)
         this.stuntCoordinator.render(ctx);
+        break;
+      case STATES.END_ANIMATION:
+        this._renderLevel(ctx);
+        this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
+        this._renderEndAnimOverlay(ctx);
         break;
       case STATES.PA_ATTACK:
         this._renderLevel(ctx);
@@ -651,7 +815,6 @@ export class Game {
         this.highScoreBoard.render(ctx);
         break;
       case STATES.ADMIN_PANEL:
-        // Admin panel is DOM-based
         break;
     }
 
@@ -662,16 +825,90 @@ export class Game {
     }
   }
 
+  _renderEndAnimOverlay(ctx) {
+    if (!this.endReason) return;
+
+    const animConfig = END_ANIMS[this.endReason] || { label: '' };
+    const t = this.endAnimTimer;
+
+    // Fade in the label text
+    let textAlpha = Math.min(1, t * 3);
+    if (t > this.endAnimDuration - 0.3) {
+      textAlpha = (this.endAnimDuration - t) / 0.3;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = textAlpha;
+
+    // Big centered text
+    const info = END_REASONS[this.endReason];
+    const isWin = info && !info.isGameOver;
+
+    ctx.fillStyle = isWin ? '#ffdd00' : '#ff4444';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+
+    // Slight bounce animation
+    const bounce = t < 0.3 ? Math.sin(t * 20) * 3 : 0;
+    ctx.fillText(animConfig.label, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20 + bounce);
+
+    // Subtitle
+    if (isWin) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '8px monospace';
+      ctx.fillText('GREAT WORK!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 5);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  _renderNameEntry(ctx) {
+    ctx.fillStyle = '#110800';
+    ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+    const cx = VIEWPORT_WIDTH / 2;
+
+    ctx.fillStyle = '#ff6600';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ENTER YOUR NAME', cx, 70);
+
+    ctx.fillStyle = '#aa7744';
+    ctx.font = '7px monospace';
+    ctx.fillText('This will appear on the high score board', cx, 90);
+
+    // Name display box
+    ctx.fillStyle = '#1a1a2a';
+    ctx.fillRect(cx - 70, 110, 140, 24);
+    ctx.strokeStyle = '#ff6600';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 70, 110, 140, 24);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px monospace';
+    const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
+    ctx.fillText(this.playerName + cursor, cx, 127);
+
+    // Hint
+    if (this.playerName.length > 0) {
+      const blink = Math.sin(Date.now() / 400) > 0;
+      if (blink) {
+        ctx.fillStyle = '#44ff44';
+        ctx.font = '7px monospace';
+        ctx.fillText('PRESS ENTER TO START', cx, 155);
+      }
+    }
+
+    ctx.textAlign = 'left';
+  }
+
   _renderLevel(ctx) {
     if (!this.tileMap) return;
 
-    // Tile map
     this.tileMap.render(ctx, this.camera);
-
-    // Trail (behind entities)
     this.trailRenderer.render(ctx, this.camera);
 
-    // Entities (sorted by Y for depth)
     const sortedEntities = [...this.entities].sort((a, b) => a.y - b.y);
     for (const entity of sortedEntities) {
       if (!entity.dead) {
@@ -679,20 +916,15 @@ export class Game {
       }
     }
 
-    // Player
     if (this.player) {
       this.player.render(ctx, this.camera);
-
-      // Fire on player
       if (this.player.isOnFire()) {
         this.fireRenderer.render(ctx, this.camera);
       }
     }
 
-    // Particles
     this.particles.render(ctx, this.camera);
 
-    // Ambient lighting (night/twilight)
     if (this.player) {
       this.ambientLight.render(
         ctx, this.camera,

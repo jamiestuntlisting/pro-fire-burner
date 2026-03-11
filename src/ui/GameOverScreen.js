@@ -1,5 +1,5 @@
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GEL_MAX, FUEL_MAX, END_REASONS } from '../constants.js';
-import { isHighScore } from '../utils/storage.js';
+import { loadHighScores, addHighScore } from '../utils/storage.js';
 
 export class GameOverScreen {
   constructor() {
@@ -8,22 +8,33 @@ export class GameOverScreen {
     this.filmCamera = null;
     this.levelConfig = null;
     this.selectedOption = 0;
-    this.nameEntry = '';
-    this.enteringName = false;
     this.finalScore = 0;
     this.timer = 0;
+    this.placement = 0;
+    this.playerName = '';
   }
 
-  setup(reason, player, filmCamera, levelConfig) {
+  setup(reason, player, filmCamera, levelConfig, playerName) {
     this.reason = reason;
     this.player = player;
     this.filmCamera = filmCamera;
     this.levelConfig = levelConfig;
     this.selectedOption = 0;
-    this.nameEntry = '';
     this.timer = 0;
+    this.playerName = playerName || 'STUNTPERSON';
     this.finalScore = this._calculateScore();
-    this.enteringName = isHighScore(this.finalScore);
+
+    // Auto-save score and determine placement
+    addHighScore({
+      playerName: this.playerName,
+      totalScore: this.finalScore,
+      highestLevel: this.levelConfig.id,
+      date: new Date().toISOString(),
+    });
+
+    const scores = loadHighScores();
+    this.placement = scores.findIndex(s => s.totalScore === this.finalScore && s.playerName === this.playerName) + 1;
+    if (this.placement === 0) this.placement = scores.length;
   }
 
   _calculateScore() {
@@ -51,36 +62,6 @@ export class GameOverScreen {
 
   update(dt, input) {
     this.timer += dt;
-
-    // Name entry
-    if (this.enteringName) {
-      // Listen for key presses for name
-      for (const [code, pressed] of Object.entries(input.keys)) {
-        if (pressed && code.startsWith('Key') && this.nameEntry.length < 10) {
-          const letter = code.replace('Key', '');
-          if (!this._lastKeys) this._lastKeys = {};
-          if (!this._lastKeys[code]) {
-            this.nameEntry += letter;
-          }
-          this._lastKeys[code] = true;
-        } else if (!pressed && this._lastKeys) {
-          this._lastKeys[code] = false;
-        }
-      }
-      if (input.keys['Backspace']) {
-        if (!this._backspaceHeld) {
-          this.nameEntry = this.nameEntry.slice(0, -1);
-          this._backspaceHeld = true;
-        }
-      } else {
-        this._backspaceHeld = false;
-      }
-      if (input.enterJustPressed && this.nameEntry.length > 0) {
-        this.enteringName = false;
-        return { action: 'SAVE_SCORE', name: this.nameEntry, score: this.finalScore };
-      }
-      return null;
-    }
 
     // Menu navigation
     const isGameOver = this.getIsGameOver();
@@ -167,36 +148,34 @@ export class GameOverScreen {
     ctx.textAlign = 'center';
     ctx.fillText(`YOUR CHECK: $${this.finalScore.toLocaleString()}`, cx, y);
 
-    // Name entry
-    if (this.enteringName) {
-      y += 25;
+    // High score placement
+    y += 20;
+    if (this.placement > 0 && this.placement <= 20) {
       ctx.fillStyle = '#ffaa00';
-      ctx.font = '8px monospace';
-      ctx.fillText('NEW HIGH SCORE! ENTER NAME:', cx, y);
-      y += 15;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
-      const displayName = this.nameEntry + (Math.sin(Date.now() / 300) > 0 ? '_' : '');
-      ctx.fillText(displayName, cx, y);
-    } else {
-      // Options
-      y = VIEWPORT_HEIGHT - 40;
-      const isGameOver = this.getIsGameOver();
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(`HIGH SCORE #${this.placement}!`, cx, y);
+    }
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '7px monospace';
+    ctx.fillText(`${this.playerName}`, cx, y + 12);
 
-      if (isGameOver) {
-        const options = ['TRY AGAIN', 'MAIN MENU'];
-        for (let i = 0; i < options.length; i++) {
-          const selected = i === this.selectedOption;
-          ctx.fillStyle = selected ? '#ffcc00' : '#888888';
-          ctx.font = `${selected ? 'bold ' : ''}9px monospace`;
-          ctx.fillText(options[i], cx, y + i * 14);
-        }
-      } else {
-        ctx.fillStyle = '#44ff44';
-        ctx.font = 'bold 9px monospace';
-        const blink = Math.sin(Date.now() / 300) > 0;
-        if (blink) ctx.fillText('PRESS ENTER FOR NEXT LEVEL', cx, y);
+    // Options
+    y = VIEWPORT_HEIGHT - 40;
+    const isGameOver = this.getIsGameOver();
+
+    if (isGameOver) {
+      const options = ['TRY AGAIN', 'MAIN MENU'];
+      for (let i = 0; i < options.length; i++) {
+        const selected = i === this.selectedOption;
+        ctx.fillStyle = selected ? '#ffcc00' : '#888888';
+        ctx.font = `${selected ? 'bold ' : ''}9px monospace`;
+        ctx.fillText(options[i], cx, y + i * 14);
       }
+    } else {
+      ctx.fillStyle = '#44ff44';
+      ctx.font = 'bold 9px monospace';
+      const blink = Math.sin(Date.now() / 300) > 0;
+      if (blink) ctx.fillText('PRESS ENTER FOR NEXT LEVEL', cx, y);
     }
 
     ctx.textAlign = 'left';

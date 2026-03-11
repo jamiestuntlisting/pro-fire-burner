@@ -8,15 +8,14 @@ export class PropaneCannon extends Entity {
     this.width = 16;
     this.height = 16;
 
-    this.fireInterval = 3.5; // seconds between bursts
-    this.timer = Math.random() * this.fireInterval; // random initial offset
+    this.fireInterval = 3.5;
+    this.timer = Math.random() * this.fireInterval;
     this.warningDuration = 0.8;
     this.burstDuration = 0.4;
     this.burstRadius = TILE_SIZE * 3;
 
-    this.state = 'IDLE'; // IDLE, WARNING, FIRING
+    this.state = 'IDLE';
     this.firingTimer = 0;
-
     this.burstHit = false;
   }
 
@@ -66,65 +65,139 @@ export class PropaneCannon extends Entity {
     const sx = Math.floor(screen.x);
     const sy = Math.floor(screen.y);
 
-    // Cannon body
-    ctx.fillStyle = '#555555';
-    ctx.fillRect(sx + 2, sy + 6, 12, 10);
+    ctx.save();
 
-    // Nozzle
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(sx + 4, sy + 2, 8, 5);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 8, sy + 16, 6, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Base plate
+    const baseGrad = ctx.createLinearGradient(sx + 1, sy + 12, sx + 15, sy + 16);
+    baseGrad.addColorStop(0, '#555555');
+    baseGrad.addColorStop(0.5, '#666666');
+    baseGrad.addColorStop(1, '#444444');
+    ctx.fillStyle = baseGrad;
+    this._roundRect(ctx, sx + 1, sy + 12, 14, 4, 2);
+
+    // Tank/body (metallic cylinder)
+    const tankGrad = ctx.createLinearGradient(sx + 2, sy + 5, sx + 14, sy + 13);
+    tankGrad.addColorStop(0, '#666666');
+    tankGrad.addColorStop(0.2, '#888888');
+    tankGrad.addColorStop(0.4, '#777777');
+    tankGrad.addColorStop(0.6, '#888888');
+    tankGrad.addColorStop(1, '#555555');
+    ctx.fillStyle = tankGrad;
+    this._roundRect(ctx, sx + 2, sy + 5, 12, 8, 3);
+
+    // Tank highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(sx + 3, sy + 5, 2, 7);
+
+    // Nozzle (top barrel)
+    const nozzleGrad = ctx.createLinearGradient(sx + 4, sy + 0, sx + 12, sy + 6);
+    nozzleGrad.addColorStop(0, '#444444');
+    nozzleGrad.addColorStop(0.5, '#555555');
+    nozzleGrad.addColorStop(1, '#333333');
+    ctx.fillStyle = nozzleGrad;
+    this._roundRect(ctx, sx + 4, sy + 1, 8, 5, 2);
+
+    // Nozzle opening
     ctx.fillStyle = '#222222';
-    ctx.fillRect(sx + 5, sy, 6, 3);
+    this._roundRect(ctx, sx + 5, sy - 1, 6, 3, 1);
+    ctx.fillStyle = this.state === 'IDLE' ? '#1a1a1a' : '#331100';
+    ctx.fillRect(sx + 6, sy - 1, 4, 2);
 
     // Warning indicator
     if (this.state === 'WARNING') {
       const flash = Math.sin(this.firingTimer * 20) > 0;
       if (flash) {
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#ff0000';
+        ctx.globalAlpha = 0.25;
         const radius = this.burstRadius * camera.zoom;
-        const cx = this.getCenterX();
-        const cy = this.getCenterY();
-        const sc = camera.worldToScreen(cx, cy);
+        const sc = camera.worldToScreen(this.getCenterX(), this.getCenterY());
+        const warnGrad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, radius);
+        warnGrad.addColorStop(0, 'rgba(255,0,0,0.3)');
+        warnGrad.addColorStop(0.5, 'rgba(255,0,0,0.15)');
+        warnGrad.addColorStop(1, 'rgba(255,0,0,0)');
+        ctx.fillStyle = warnGrad;
         ctx.beginPath();
         ctx.arc(sc.x, sc.y, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.restore();
       }
     }
 
     // Firing burst
     if (this.state === 'FIRING') {
-      ctx.save();
-      ctx.globalAlpha = 0.5 * (1 - this.firingTimer / this.burstDuration);
-      ctx.fillStyle = '#ff6600';
+      const burstProgress = this.firingTimer / this.burstDuration;
       const radius = this.burstRadius * camera.zoom;
-      const cx = this.getCenterX();
-      const cy = this.getCenterY();
-      const sc = camera.worldToScreen(cx, cy);
+      const sc = camera.worldToScreen(this.getCenterX(), this.getCenterY());
+
+      // Outer explosion
+      ctx.globalAlpha = 0.4 * (1 - burstProgress);
+      const burstGrad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, radius);
+      burstGrad.addColorStop(0, 'rgba(255,200,50,0.6)');
+      burstGrad.addColorStop(0.3, 'rgba(255,130,0,0.4)');
+      burstGrad.addColorStop(0.6, 'rgba(255,80,0,0.2)');
+      burstGrad.addColorStop(1, 'rgba(200,40,0,0)');
+      ctx.fillStyle = burstGrad;
       ctx.beginPath();
       ctx.arc(sc.x, sc.y, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Inner burst
-      ctx.fillStyle = '#ffaa00';
+      // Inner core
+      ctx.globalAlpha = 0.6 * (1 - burstProgress);
+      const coreGrad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, radius * 0.4);
+      coreGrad.addColorStop(0, 'rgba(255,255,200,0.9)');
+      coreGrad.addColorStop(0.5, 'rgba(255,220,80,0.5)');
+      coreGrad.addColorStop(1, 'rgba(255,150,0,0)');
+      ctx.fillStyle = coreGrad;
       ctx.beginPath();
-      ctx.arc(sc.x, sc.y, radius * 0.5, 0, Math.PI * 2);
+      ctx.arc(sc.x, sc.y, radius * 0.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.restore();
 
-      // Flame from nozzle
-      ctx.fillStyle = '#ff4400';
-      ctx.fillRect(sx + 3, sy - 8, 10, 10);
-      ctx.fillStyle = '#ffaa00';
-      ctx.fillRect(sx + 5, sy - 12, 6, 8);
+      // Flame jet from nozzle
+      const jetGrad = ctx.createLinearGradient(sx + 8, sy - 2, sx + 8, sy - 18);
+      jetGrad.addColorStop(0, 'rgba(255,200,50,0.9)');
+      jetGrad.addColorStop(0.3, 'rgba(255,130,0,0.7)');
+      jetGrad.addColorStop(0.7, 'rgba(255,80,0,0.3)');
+      jetGrad.addColorStop(1, 'rgba(200,40,0,0)');
+      ctx.fillStyle = jetGrad;
+      ctx.beginPath();
+      ctx.moveTo(sx + 5, sy - 1);
+      ctx.lineTo(sx + 11, sy - 1);
+      ctx.lineTo(sx + 13, sy - 14);
+      ctx.lineTo(sx + 3, sy - 14);
+      ctx.closePath();
+      ctx.fill();
     }
 
     // Indicator light
-    ctx.fillStyle = this.state === 'IDLE' ? '#00aa00' : '#ff0000';
-    ctx.fillRect(sx + 12, sy + 6, 2, 2);
+    const lightColor = this.state === 'IDLE' ? '#00cc00' : '#ff0000';
+    ctx.fillStyle = lightColor;
+    ctx.beginPath();
+    ctx.arc(sx + 13, sy + 7, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Light glow
+    ctx.fillStyle = this.state === 'IDLE' ? 'rgba(0,200,0,0.2)' : 'rgba(255,0,0,0.2)';
+    ctx.beginPath();
+    ctx.arc(sx + 13, sy + 7, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  _roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
   }
 }

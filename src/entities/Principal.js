@@ -6,11 +6,13 @@ export class Principal extends Extra {
     super(x, y);
     this.isPrincipal = true;
     this.starBob = 0;
+    this.starSpin = 0;
   }
 
   update(dt, tileMap) {
     super.update(dt, tileMap);
     this.starBob += dt * 3;
+    this.starSpin += dt * 2;
   }
 
   render(ctx, camera) {
@@ -22,16 +24,40 @@ export class Principal extends Extra {
     const sx = Math.floor(screen.x);
     const sy = Math.floor(screen.y);
 
-    // Star icon above head
     const bobOffset = Math.sin(this.starBob) * 2;
-    const starY = sy - 8 + bobOffset;
+    const starCx = sx + 6;
+    const starCy = sy - 8 + bobOffset;
+
+    ctx.save();
+
+    // Star glow
+    ctx.fillStyle = 'rgba(255,220,0,0.3)';
+    ctx.beginPath();
+    ctx.arc(starCx, starCy, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw a proper 5-pointed star
     ctx.fillStyle = '#ffdd00';
-    // Simple star shape using pixels
-    ctx.fillRect(sx + 4, starY, 4, 1);
-    ctx.fillRect(sx + 3, starY + 1, 6, 1);
-    ctx.fillRect(sx + 2, starY + 2, 8, 1);
-    ctx.fillRect(sx + 4, starY + 3, 4, 1);
-    ctx.fillRect(sx + 3, starY + 4, 2, 1);
-    ctx.fillRect(sx + 7, starY + 4, 2, 1);
+    ctx.beginPath();
+    const outerR = 4;
+    const innerR = 1.8;
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI / 5) - Math.PI / 2 + this.starSpin * 0.3;
+      const r = i % 2 === 0 ? outerR : innerR;
+      const px = starCx + Math.cos(angle) * r;
+      const py = starCy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Inner highlight
+    ctx.fillStyle = 'rgba(255,255,200,0.5)';
+    ctx.beginPath();
+    ctx.arc(starCx, starCy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 }
