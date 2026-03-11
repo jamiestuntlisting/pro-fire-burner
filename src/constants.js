@@ -1,7 +1,7 @@
 export const TILE_SIZE = 48;
 export const PLAYER_SPEED = 360;
-export const VIEWPORT_WIDTH = 480;
-export const VIEWPORT_HEIGHT = 270;
+export const VIEWPORT_WIDTH = 960;
+export const VIEWPORT_HEIGHT = 540;
 export const GEL_DEPLETION_BASE = 4.5;
 export const FUEL_DEPLETION_BASE = 2.5;
 export const GEL_MAX = 100;

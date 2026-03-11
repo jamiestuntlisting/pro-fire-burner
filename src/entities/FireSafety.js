@@ -34,7 +34,7 @@ export class FireSafety extends Entity {
     this.cooldownTimer = 0;
     this.cooldownDuration = 2.0 + Math.random() * 1.5;
     this.followDistance = TILE_SIZE * 4;
-    this.followSpeed = PLAYER_SPEED * 0.6;
+    this.followSpeed = PLAYER_SPEED * 0.25;
 
     // Track player position
     this.playerX = 0;
@@ -42,7 +42,7 @@ export class FireSafety extends Entity {
 
     // Movement toward player (when player lays down)
     this.moveToTarget = null;
-    this.moveSpeed = PLAYER_SPEED * 2;
+    this.moveSpeed = PLAYER_SPEED * 0.8;
     this.arriving = false;
 
     // Spray particle animation

@@ -72,46 +72,152 @@ export class TileMap {
 
   _renderTile(ctx, tile, sx, sy, col, row) {
     const t = this.theme;
+    const S = TILE_SIZE;
+    // Pseudo-random based on tile position for consistent detail
+    const hash = ((col * 7 + row * 13) * 2654435761) >>> 0;
+    const r1 = (hash & 0xff) / 255;
+    const r2 = ((hash >> 8) & 0xff) / 255;
+    const r3 = ((hash >> 16) & 0xff) / 255;
 
     switch (tile) {
       case TILE_FLOOR:
-        ctx.fillStyle = t.floor;
-        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-        // Subtle grid pattern
-        if ((col + row) % 2 === 0) {
-          ctx.fillStyle = t.floorAlt;
-          ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = (col + row) % 2 === 0 ? t.floorAlt : t.floor;
+        ctx.fillRect(sx, sy, S, S);
+
+        // Subtle noise/texture variation
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        ctx.fillRect(sx + r1 * 20, sy + r2 * 20, 8 + r3 * 12, 2);
+        ctx.fillRect(sx + r2 * 30, sy + r3 * 25, 2, 6 + r1 * 8);
+
+        // Scuff marks / floor detail
+        ctx.fillStyle = 'rgba(0,0,0,0.04)';
+        if (r1 > 0.7) {
+          ctx.fillRect(sx + r2 * 24, sy + r3 * 24, 12, 1);
         }
+        if (r2 > 0.8) {
+          ctx.fillRect(sx + r3 * 20, sy + r1 * 30, 1, 10);
+        }
+
+        // Tile grout lines
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.fillRect(sx, sy, S, 1);
+        ctx.fillRect(sx, sy, 1, S);
         break;
+
       case TILE_WALL:
         ctx.fillStyle = t.wall;
-        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-        // Brick pattern
-        ctx.fillStyle = t.wallDetail;
-        if (row % 2 === 0) {
-          ctx.fillRect(sx + 7, sy, 2, TILE_SIZE);
-        } else {
-          ctx.fillRect(sx, sy, 2, TILE_SIZE);
-          ctx.fillRect(sx + 14, sy, 2, TILE_SIZE);
+        ctx.fillRect(sx, sy, S, S);
+
+        // Multi-row brick pattern with mortar
+        const brickH = 12;
+        const brickW = 24;
+        for (let by = 0; by < S; by += brickH) {
+          const offsetX = (row + Math.floor(by / brickH)) % 2 === 0 ? 0 : brickW / 2;
+          // Mortar horizontal line
+          ctx.fillStyle = t.wallDetail;
+          ctx.fillRect(sx, sy + by, S, 2);
+          // Vertical mortar lines
+          for (let bx = -offsetX; bx < S; bx += brickW) {
+            ctx.fillRect(sx + bx, sy + by, 2, brickH);
+            // Individual brick shading
+            const bHash = ((col * 3 + bx) * 7 + (row * 5 + by) * 11) & 0xff;
+            if (bHash > 200) {
+              ctx.fillStyle = 'rgba(255,255,255,0.03)';
+              ctx.fillRect(sx + bx + 3, sy + by + 3, brickW - 6, brickH - 5);
+            } else if (bHash < 60) {
+              ctx.fillStyle = 'rgba(0,0,0,0.05)';
+              ctx.fillRect(sx + bx + 3, sy + by + 3, brickW - 6, brickH - 5);
+            }
+            ctx.fillStyle = t.wallDetail;
+          }
         }
-        ctx.fillRect(sx, sy, TILE_SIZE, 1);
+
+        // Top edge highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(sx, sy, S, 1);
+        // Bottom shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(sx, sy + S - 2, S, 2);
         break;
-      case TILE_WATER:
+
+      case TILE_WATER: {
         ctx.fillStyle = this.waterFrame === 0 ? t.water1 : t.water2;
-        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-        // Wave effect
+        ctx.fillRect(sx, sy, S, S);
+
+        // Multiple wave lines at different depths
         ctx.fillStyle = t.waterHighlight;
-        const waveOffset = this.waterFrame * 4;
-        ctx.fillRect(sx + ((col * 3 + waveOffset) % 12), sy + 4, 4, 1);
-        ctx.fillRect(sx + ((col * 7 + waveOffset + 6) % 14), sy + 10, 3, 1);
+        const wo = this.waterFrame * 6;
+        for (let wy = 4; wy < S; wy += 8) {
+          const wShift = (col * 5 + wy * 3 + wo) % 20;
+          ctx.fillRect(sx + wShift, sy + wy, 8, 1);
+          ctx.fillRect(sx + ((wShift + 14) % S), sy + wy + 3, 5, 1);
+        }
+
+        // Shimmer highlights
+        ctx.fillStyle = 'rgba(100,180,255,0.08)';
+        if (r1 > 0.5) {
+          ctx.fillRect(sx + r2 * 30, sy + r3 * 30, 6, 3);
+        }
+
+        // Depth gradient at edges
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.fillRect(sx, sy, S, 3);
+        ctx.fillRect(sx, sy, 3, S);
         break;
-      default:
-        // Props
-        ctx.fillStyle = t.floor;
-        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = t.prop || '#555';
-        ctx.fillRect(sx + 3, sy + 3, 10, 10);
+      }
+      default: {
+        // Props - varied decorative objects
+        ctx.fillStyle = (col + row) % 2 === 0 ? t.floorAlt : t.floor;
+        ctx.fillRect(sx, sy, S, S);
+
+        // Grout
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.fillRect(sx, sy, S, 1);
+        ctx.fillRect(sx, sy, 1, S);
+
+        const propType = Math.floor(r1 * 4);
+        const pc = t.prop || '#555';
+        ctx.fillStyle = pc;
+
+        if (propType === 0) {
+          // Crate
+          ctx.fillRect(sx + 6, sy + 6, 36, 36);
+          ctx.fillStyle = 'rgba(255,255,255,0.06)';
+          ctx.fillRect(sx + 6, sy + 6, 36, 2);
+          ctx.fillRect(sx + 6, sy + 6, 2, 36);
+          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          // Cross planks
+          ctx.fillRect(sx + 6, sy + 22, 36, 3);
+          ctx.fillRect(sx + 22, sy + 6, 3, 36);
+        } else if (propType === 1) {
+          // Barrel
+          ctx.beginPath();
+          ctx.arc(sx + 24, sy + 24, 16, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.06)';
+          ctx.beginPath();
+          ctx.arc(sx + 24, sy + 24, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          ctx.fillRect(sx + 10, sy + 22, 28, 3);
+        } else if (propType === 2) {
+          // Low table / equipment
+          ctx.fillRect(sx + 4, sy + 14, 40, 20);
+          ctx.fillStyle = 'rgba(255,255,255,0.05)';
+          ctx.fillRect(sx + 4, sy + 14, 40, 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          ctx.fillRect(sx + 8, sy + 34, 4, 8);
+          ctx.fillRect(sx + 36, sy + 34, 4, 8);
+        } else {
+          // Debris / rubble pile
+          ctx.fillRect(sx + 8, sy + 18, 14, 10);
+          ctx.fillRect(sx + 18, sy + 12, 18, 16);
+          ctx.fillRect(sx + 12, sy + 24, 22, 12);
+          ctx.fillStyle = 'rgba(255,255,255,0.04)';
+          ctx.fillRect(sx + 20, sy + 12, 14, 2);
+        }
         break;
+      }
     }
   }
 }

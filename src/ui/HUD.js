@@ -29,9 +29,9 @@ export class HUD {
   }
 
   render(ctx, player, levelConfig, filmCamera, timer) {
-    const barWidth = 120;
-    const barHeight = 8;
-    const padding = 6;
+    const barWidth = 240;
+    const barHeight = 16;
+    const padding = 12;
     const x = padding;
 
     // Gel meter
@@ -41,32 +41,34 @@ export class HUD {
 
     // Fuel meter
     const fuelPct = player.fuel / FUEL_MAX;
-    this._drawBar(ctx, x, padding + barHeight + 4, barWidth, barHeight, fuelPct, '#ff6600', 'FUEL');
+    this._drawBar(ctx, x, padding + barHeight + 8, barWidth, barHeight, fuelPct, '#ff6600', 'FUEL');
 
     // Flame icon
     ctx.fillStyle = '#ff4400';
     ctx.beginPath();
-    ctx.arc(x + barWidth + 6, padding + barHeight + 7, 3, 0, Math.PI * 2);
+    ctx.arc(x + barWidth + 12, padding + barHeight + 14, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#ffaa00';
     ctx.beginPath();
-    ctx.arc(x + barWidth + 6, padding + barHeight + 5, 2, 0, Math.PI * 2);
+    ctx.arc(x + barWidth + 12, padding + barHeight + 10, 4, 0, Math.PI * 2);
     ctx.fill();
 
     // Score
     const score = Math.floor(player.secondsOnFire * 100);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
+    ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(`$${score.toLocaleString()}`, VIEWPORT_WIDTH - padding, padding + 8);
+    ctx.fillText(`$${score.toLocaleString()}`, VIEWPORT_WIDTH - padding, padding + 16);
 
     if (levelConfig) {
-      ctx.fillText(`LVL ${levelConfig.id}`, VIEWPORT_WIDTH - padding, padding + 18);
+      ctx.font = '14px monospace';
+      ctx.fillText(`LVL ${levelConfig.id}`, VIEWPORT_WIDTH - padding, padding + 36);
     }
 
     if (player.comboMultiplier > 1.0) {
       ctx.fillStyle = '#ffdd00';
-      ctx.fillText(`x${player.comboMultiplier.toFixed(1)}`, VIEWPORT_WIDTH - padding, padding + 28);
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText(`x${player.comboMultiplier.toFixed(1)}`, VIEWPORT_WIDTH - padding, padding + 56);
     }
 
     // Camera status
@@ -75,14 +77,16 @@ export class HUD {
       const onCamera = filmCamera.playerInFOV;
       if (onCamera) {
         ctx.fillStyle = '#44ff44';
+        ctx.font = 'bold 16px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('ON CAMERA', VIEWPORT_WIDTH / 2, padding + 8);
+        ctx.fillText('ON CAMERA', VIEWPORT_WIDTH / 2, padding + 16);
       } else {
         const flash = Math.sin(this.flashTimer * 10) > 0;
         if (flash) {
           ctx.fillStyle = '#ff4444';
+          ctx.font = 'bold 16px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('OFF CAMERA!', VIEWPORT_WIDTH / 2, padding + 8);
+          ctx.fillText('OFF CAMERA!', VIEWPORT_WIDTH / 2, padding + 16);
         }
       }
     }
@@ -90,9 +94,10 @@ export class HUD {
     // Timer
     if (timer && levelConfig && levelConfig.timeLimit > 0) {
       ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center';
       const secs = Math.ceil(timer.remaining);
-      ctx.fillText(`TIME: ${secs}s`, VIEWPORT_WIDTH / 2, padding + 20);
+      ctx.fillText(`TIME: ${secs}s`, VIEWPORT_WIDTH / 2, padding + 40);
     }
 
     // Goal banner
@@ -122,23 +127,23 @@ export class HUD {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    const bannerY = 30;
-    const bannerH = 28;
+    const bannerY = 60;
+    const bannerH = 56;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, bannerY, VIEWPORT_WIDTH, bannerH);
 
     ctx.fillStyle = '#ffcc00';
-    ctx.fillRect(0, bannerY, VIEWPORT_WIDTH, 1);
-    ctx.fillRect(0, bannerY + bannerH - 1, VIEWPORT_WIDTH, 1);
+    ctx.fillRect(0, bannerY, VIEWPORT_WIDTH, 2);
+    ctx.fillRect(0, bannerY + bannerH - 2, VIEWPORT_WIDTH, 2);
 
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(titleText, VIEWPORT_WIDTH / 2, bannerY + 12);
+    ctx.fillText(titleText, VIEWPORT_WIDTH / 2, bannerY + 24);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '7px monospace';
-    ctx.fillText(goalText, VIEWPORT_WIDTH / 2, bannerY + 23);
+    ctx.font = '14px monospace';
+    ctx.fillText(goalText, VIEWPORT_WIDTH / 2, bannerY + 46);
 
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -157,12 +162,12 @@ export class HUD {
       ctx.fillStyle = color;
       ctx.fillRect(x + 1, y + 1, fillWidth, height - 2);
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(x + 1, y + 1, fillWidth, 1);
+      ctx.fillRect(x + 1, y + 1, fillWidth, 2);
     }
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '6px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(label, x + 2, y + height - 2);
+    ctx.fillText(label, x + 4, y + height - 3);
   }
 }

@@ -33,75 +33,75 @@ export class CallSheet {
       ctx.fillRect(0, y, VIEWPORT_WIDTH, 1);
     }
 
-    const leftMargin = 30;
-    let y = 20;
+    const leftMargin = 60;
+    let y = 40;
 
     // Header
     ctx.fillStyle = '#333333';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'left';
     ctx.fillText('PRODUCTION CALL SHEET', leftMargin, y);
 
-    y += 5;
+    y += 10;
     ctx.fillStyle = '#999999';
-    ctx.fillRect(leftMargin, y, VIEWPORT_WIDTH - 60, 1);
+    ctx.fillRect(leftMargin, y, VIEWPORT_WIDTH - 120, 1);
 
-    y += 14;
+    y += 28;
     ctx.fillStyle = '#222222';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = 'bold 24px monospace';
     ctx.fillText('FIRE BURN SIMULATOR', leftMargin, y);
 
-    y += 18;
+    y += 36;
     ctx.fillStyle = '#444444';
-    ctx.font = '8px monospace';
+    ctx.font = '16px monospace';
     ctx.fillText(`LEVEL ${config.id}`, leftMargin, y);
 
-    y += 14;
+    y += 28;
     ctx.fillStyle = '#111111';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = 'bold 22px monospace';
     ctx.fillText(config.title, leftMargin, y);
 
-    y += 18;
+    y += 36;
     ctx.fillStyle = '#555555';
-    ctx.font = '8px monospace';
+    ctx.font = '16px monospace';
     ctx.fillText(`TYPE: ${config.levelType}`, leftMargin, y);
 
-    y += 12;
+    y += 24;
     ctx.fillText(`TIME OF DAY: ${config.timeOfDay.toUpperCase()}`, leftMargin, y);
 
-    y += 12;
+    y += 24;
     ctx.fillText(`COSTUME: ${config.costumeDescription}`, leftMargin, y);
 
     if (config.timeLimit > 0) {
-      y += 12;
+      y += 24;
       ctx.fillStyle = '#cc4400';
       ctx.fillText(`TIME LIMIT: ${config.timeLimit}s`, leftMargin, y);
     }
 
     if (config.hasCameraCar) {
-      y += 12;
+      y += 24;
       ctx.fillStyle = '#cc4400';
       ctx.fillText('WARNING: CAMERA CAR IN PURSUIT', leftMargin, y);
     }
 
     // Divider
-    y += 14;
+    y += 28;
     ctx.fillStyle = '#999999';
-    ctx.fillRect(leftMargin, y, VIEWPORT_WIDTH - 60, 1);
+    ctx.fillRect(leftMargin, y, VIEWPORT_WIDTH - 120, 1);
 
     // Tagline
-    y += 16;
+    y += 32;
     ctx.fillStyle = '#886644';
-    ctx.font = 'italic 9px monospace';
+    ctx.font = 'italic 18px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`"${config.tagline || 'Stay on fire and stay safe!'}"`, VIEWPORT_WIDTH / 2, y);
 
     // Continue prompt
     ctx.fillStyle = '#666666';
-    ctx.font = '7px monospace';
+    ctx.font = '14px monospace';
     const blink = Math.sin(Date.now() / 300) > 0;
     if (blink) {
-      ctx.fillText('PRESS ENTER TO BEGIN', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 20);
+      ctx.fillText('PRESS ENTER TO BEGIN', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 40);
     }
 
     ctx.textAlign = 'left';

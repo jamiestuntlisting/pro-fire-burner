@@ -12,8 +12,9 @@ const TIPS = [
 
 export class StuntCoordinator {
   constructor() {
-    this.screenX = VIEWPORT_WIDTH - 80;
-    this.screenY = VIEWPORT_HEIGHT - 60;
+    // World position (set near film camera)
+    this.worldX = 0;
+    this.worldY = 0;
 
     this.currentTip = '';
     this.tipTimer = 0;
@@ -29,9 +30,21 @@ export class StuntCoordinator {
     this.isShouting = false;
   }
 
-  update(dt, playerIsMoving) {
+  placeNearCamera(filmCamera) {
+    if (!filmCamera) return;
+    this.worldX = filmCamera.x + filmCamera.width + 8;
+    this.worldY = filmCamera.y - 4;
+  }
+
+  update(dt, playerIsMoving, filmCamera) {
     this.breatheTimer += dt;
     this.headNodTimer += dt;
+
+    // Follow alongside the film camera
+    if (filmCamera) {
+      this.worldX = filmCamera.x + filmCamera.width + 8;
+      this.worldY = filmCamera.y - 4;
+    }
 
     if (this.tipTimer > 0) {
       this.tipTimer -= dt;
@@ -63,14 +76,26 @@ export class StuntCoordinator {
     this.tipAlpha = 0;
   }
 
-  render(ctx) {
-    this._renderCharacter(ctx);
-    this._renderTip(ctx);
+  render(ctx, camera) {
+    if (!camera) return;
+    const screen = camera.worldToScreen(this.worldX, this.worldY);
+    const sx = Math.floor(screen.x);
+    const sy = Math.floor(screen.y);
+
+    // Check if coordinator is on screen
+    const margin = 60;
+    const onScreen = sx > -margin && sx < VIEWPORT_WIDTH + margin &&
+                     sy > -margin && sy < VIEWPORT_HEIGHT + margin;
+
+    if (onScreen) {
+      this._renderCharacter(ctx, sx, sy);
+      this._renderTipWorld(ctx, sx, sy);
+    } else {
+      this._renderOffscreenTip(ctx, sx, sy);
+    }
   }
 
-  _renderCharacter(ctx) {
-    const x = this.screenX;
-    const y = this.screenY;
+  _renderCharacter(ctx, x, y) {
     const breathe = Math.sin(this.breatheTimer * 1.5) * 1;
 
     ctx.save();
@@ -91,7 +116,7 @@ export class StuntCoordinator {
     this._roundRect(ctx, x - 16, y + 32, 12, 5, 2);
     this._roundRect(ctx, x + 4, y + 32, 12, 5, 2);
 
-    // Body - dark tactical vest
+    // Body
     const bodyGrad = ctx.createLinearGradient(x - 18, y - 4, x + 18, y + 24);
     bodyGrad.addColorStop(0, '#1a1a2a');
     bodyGrad.addColorStop(0.5, '#222233');
@@ -172,16 +197,16 @@ export class StuntCoordinator {
     ctx.restore();
   }
 
-  _renderTip(ctx) {
+  _renderTipWorld(ctx, sx, sy) {
     if (this.tipAlpha <= 0) return;
 
     ctx.save();
     ctx.globalAlpha = this.tipAlpha;
 
-    const bubbleX = this.screenX - 110;
-    const bubbleY = this.screenY - 48;
-    const bubbleW = 100;
-    const bubbleH = 24;
+    const bubbleW = 140;
+    const bubbleH = 28;
+    const bubbleX = sx - bubbleW / 2;
+    const bubbleY = sy - 64;
 
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
     this._roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 6);
@@ -197,19 +222,85 @@ export class StuntCoordinator {
     ctx.closePath();
     ctx.stroke();
 
+    // Tail pointing down to character
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
     ctx.beginPath();
-    ctx.moveTo(bubbleX + bubbleW - 8, bubbleY + bubbleH);
-    ctx.lineTo(bubbleX + bubbleW + 4, bubbleY + bubbleH + 10);
-    ctx.lineTo(bubbleX + bubbleW - 18, bubbleY + bubbleH);
+    ctx.moveTo(sx - 5, bubbleY + bubbleH);
+    ctx.lineTo(sx, bubbleY + bubbleH + 10);
+    ctx.lineTo(sx + 5, bubbleY + bubbleH);
     ctx.closePath();
     ctx.fill();
 
     const shake = this.isShouting ? Math.sin(this.breatheTimer * 20) * 0.5 : 0;
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 9px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(this.currentTip, bubbleX + bubbleW / 2 + shake, bubbleY + 16);
+    ctx.fillText(this.currentTip, sx + shake, bubbleY + 18);
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  _renderOffscreenTip(ctx, sx, sy) {
+    if (this.tipAlpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = this.tipAlpha;
+
+    // Determine which edge to place the indicator
+    const pad = 24;
+    let edgeX = Math.max(pad + 90, Math.min(VIEWPORT_WIDTH - pad - 90, sx));
+    let edgeY = Math.max(pad + 18, Math.min(VIEWPORT_HEIGHT - pad - 18, sy));
+
+    if (sx < 0) edgeX = pad + 90;
+    else if (sx > VIEWPORT_WIDTH) edgeX = VIEWPORT_WIDTH - pad - 90;
+    if (sy < 0) edgeY = pad + 18;
+    else if (sy > VIEWPORT_HEIGHT) edgeY = VIEWPORT_HEIGHT - pad - 18;
+
+    const bubbleW = 180;
+    const bubbleH = 32;
+    const bubbleX = edgeX - bubbleW / 2;
+    const bubbleY = edgeY - bubbleH / 2;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    this._roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 8);
+
+    // Border
+    ctx.strokeStyle = '#ffcc00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bubbleX + 8, bubbleY);
+    ctx.arcTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + bubbleH, 8);
+    ctx.arcTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX, bubbleY + bubbleH, 8);
+    ctx.arcTo(bubbleX, bubbleY + bubbleH, bubbleX, bubbleY, 8);
+    ctx.arcTo(bubbleX, bubbleY, bubbleX + bubbleW, bubbleY, 8);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Arrow pointing toward the coordinator
+    const isLeft = sx < VIEWPORT_WIDTH / 2;
+    const arrowX = isLeft ? bubbleX - 2 : bubbleX + bubbleW + 2;
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath();
+    if (isLeft) {
+      ctx.moveTo(arrowX, edgeY);
+      ctx.lineTo(arrowX + 10, edgeY - 6);
+      ctx.lineTo(arrowX + 10, edgeY + 6);
+    } else {
+      ctx.moveTo(arrowX, edgeY);
+      ctx.lineTo(arrowX - 10, edgeY - 6);
+      ctx.lineTo(arrowX - 10, edgeY + 6);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Text
+    const shake = this.isShouting ? Math.sin(this.breatheTimer * 20) * 0.5 : 0;
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.currentTip, edgeX + shake, edgeY + 5);
 
     ctx.globalAlpha = 1;
     ctx.restore();

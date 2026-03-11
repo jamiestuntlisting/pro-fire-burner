@@ -177,8 +177,8 @@ export class Game {
     this.camera.setMapBounds(this.tileMap.widthPx, this.tileMap.heightPx);
     this.camera.x = this.player.getCenterX() - VIEWPORT_WIDTH / 2;
     this.camera.y = this.player.getCenterY() - VIEWPORT_HEIGHT / 2;
-    this.camera.targetZoom = 0.4;
-    this.camera.zoom = 0.4;
+    this.camera.targetZoom = 0.27;
+    this.camera.zoom = 0.27;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
     // Always follow the player
@@ -369,8 +369,8 @@ export class Game {
       });
       this.soundManager.playIgnition();
 
-      this.camera.zoomTo(0.45);
-      setTimeout(() => this.camera.zoomTo(0.4), 300);
+      this.camera.zoomTo(0.30);
+      setTimeout(() => this.camera.zoomTo(0.27), 300);
     }
     this.camera.follow(this.player);
     this.camera.update(dt);
@@ -457,7 +457,7 @@ export class Game {
     this.trailRenderer.update(dt, this.player.x, this.player.y, this.player.isMoving, intensity);
     this.particles.update(dt);
 
-    this.stuntCoordinator.update(dt, this.player.isMoving);
+    this.stuntCoordinator.update(dt, this.player.isMoving, this.filmCamera);
 
     if (this.player.gel <= 0) {
       this.endLevel('BURNED');
@@ -691,7 +691,7 @@ export class Game {
             1, { r: 255, g: 255, b: 100, life: 0.8, spread: 45 }
           );
         }
-        if (t < 0.5) this.camera.zoomTo(0.35);
+        if (t < 0.5) this.camera.zoomTo(0.23);
         break;
 
       case 'SAFE_OUT':
@@ -771,7 +771,7 @@ export class Game {
       case STATES.PLAYING:
         this._renderLevel(ctx);
         this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
-        this.stuntCoordinator.render(ctx);
+        this.stuntCoordinator.render(ctx, this.camera);
         break;
       case STATES.END_ANIMATION:
         this._renderLevel(ctx);
@@ -821,18 +821,18 @@ export class Game {
     const isWin = info && !info.isGameOver;
 
     ctx.fillStyle = isWin ? '#ffdd00' : '#ff4444';
-    ctx.font = 'bold 16px monospace';
+    ctx.font = 'bold 32px monospace';
     ctx.textAlign = 'center';
 
     // Slight bounce animation
-    const bounce = t < 0.3 ? Math.sin(t * 20) * 3 : 0;
-    ctx.fillText(animConfig.label, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20 + bounce);
+    const bounce = t < 0.3 ? Math.sin(t * 20) * 6 : 0;
+    ctx.fillText(animConfig.label, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 40 + bounce);
 
     // Subtitle
     if (isWin) {
       ctx.fillStyle = '#ffffff';
-      ctx.font = '8px monospace';
-      ctx.fillText('GREAT WORK!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 5);
+      ctx.font = '16px monospace';
+      ctx.fillText('GREAT WORK!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 10);
     }
 
     ctx.globalAlpha = 1;
@@ -846,33 +846,33 @@ export class Game {
     const cx = VIEWPORT_WIDTH / 2;
 
     ctx.fillStyle = '#ff6600';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = 'bold 28px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('ENTER YOUR NAME', cx, 70);
+    ctx.fillText('ENTER YOUR NAME', cx, 140);
 
     ctx.fillStyle = '#aa7744';
-    ctx.font = '7px monospace';
-    ctx.fillText('This will appear on the high score board', cx, 90);
+    ctx.font = '14px monospace';
+    ctx.fillText('This will appear on the high score board', cx, 180);
 
     // Name display box
     ctx.fillStyle = '#1a1a2a';
-    ctx.fillRect(cx - 70, 110, 140, 24);
+    ctx.fillRect(cx - 140, 220, 280, 48);
     ctx.strokeStyle = '#ff6600';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx - 70, 110, 140, 24);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - 140, 220, 280, 48);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = 'bold 24px monospace';
     const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
-    ctx.fillText(this.playerName + cursor, cx, 127);
+    ctx.fillText(this.playerName + cursor, cx, 252);
 
     // Hint
     if (this.playerName.length > 0) {
       const blink = Math.sin(Date.now() / 400) > 0;
       if (blink) {
         ctx.fillStyle = '#44ff44';
-        ctx.font = '7px monospace';
-        ctx.fillText('PRESS ENTER TO START', cx, 155);
+        ctx.font = '14px monospace';
+        ctx.fillText('PRESS ENTER TO START', cx, 310);
       }
     }
 

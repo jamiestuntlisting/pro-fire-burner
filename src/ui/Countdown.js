@@ -71,7 +71,7 @@ export class Countdown {
     if (this.phase < 3) {
       // Number
       ctx.fillStyle = '#ffcc00';
-      ctx.font = 'bold 40px monospace';
+      ctx.font = 'bold 80px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(text, 0, 0);
@@ -79,12 +79,12 @@ export class Countdown {
       // Glow
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#ff6600';
-      ctx.fillText(text, 1, 1);
+      ctx.fillText(text, 2, 2);
       ctx.globalAlpha = 1;
     } else {
       // BURN!
       ctx.fillStyle = '#ff4400';
-      ctx.font = 'bold 30px monospace';
+      ctx.font = 'bold 60px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(text, 0, 0);
@@ -92,7 +92,7 @@ export class Countdown {
       // Fire glow
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#ffaa00';
-      ctx.fillText(text, 0, -2);
+      ctx.fillText(text, 0, -3);
       ctx.globalAlpha = 1;
     }
 

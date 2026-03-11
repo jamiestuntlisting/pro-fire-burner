@@ -111,48 +111,48 @@ export class MainMenu {
     ctx.globalAlpha = 1;
 
     // Title
-    const titleY = 60;
+    const titleY = 120;
     ctx.fillStyle = '#ff6600';
-    ctx.font = 'bold 16px monospace';
+    ctx.font = 'bold 32px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('FIRE BURN', VIEWPORT_WIDTH / 2, titleY);
     ctx.fillStyle = '#ffaa00';
-    ctx.fillText('SIMULATOR', VIEWPORT_WIDTH / 2, titleY + 20);
+    ctx.fillText('SIMULATOR', VIEWPORT_WIDTH / 2, titleY + 40);
 
     // Fire effect on title
     const flicker = Math.sin(this.timer * 8) * 2;
     ctx.fillStyle = '#ff4400';
-    ctx.font = 'bold 16px monospace';
+    ctx.font = 'bold 32px monospace';
     ctx.globalAlpha = 0.3;
     ctx.fillText('FIRE BURN', VIEWPORT_WIDTH / 2 + flicker, titleY - 1);
     ctx.globalAlpha = 1;
 
     // Tagline
     ctx.fillStyle = '#aa7744';
-    ctx.font = '7px monospace';
-    ctx.fillText('"Stay on fire and stay safe!"', VIEWPORT_WIDTH / 2, titleY + 38);
+    ctx.font = '14px monospace';
+    ctx.fillText('"Stay on fire and stay safe!"', VIEWPORT_WIDTH / 2, titleY + 76);
 
     // Menu options
-    const menuStartY = titleY + 70;
+    const menuStartY = titleY + 140;
     for (let i = 0; i < this.options.length; i++) {
-      const y = menuStartY + i * 20;
+      const y = menuStartY + i * 40;
       const selected = i === this.selectedIndex;
 
       if (selected) {
         ctx.fillStyle = '#ff6600';
-        ctx.fillText('>', VIEWPORT_WIDTH / 2 - 50, y);
+        ctx.fillText('>', VIEWPORT_WIDTH / 2 - 100, y);
         ctx.fillStyle = '#ffcc00';
       } else {
         ctx.fillStyle = '#886644';
       }
-      ctx.font = '10px monospace';
+      ctx.font = '20px monospace';
       ctx.fillText(this.options[i], VIEWPORT_WIDTH / 2, y);
     }
 
     // Controls hint
     ctx.fillStyle = '#554433';
-    ctx.font = '6px monospace';
-    ctx.fillText('ARROWS/WASD to move  |  SPACE to lay down  |  ENTER to select', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 15);
+    ctx.font = '12px monospace';
+    ctx.fillText('ARROWS/WASD to move  |  SPACE to lay down  |  ENTER to select', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
 
     ctx.textAlign = 'left';
   }

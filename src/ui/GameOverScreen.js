@@ -24,7 +24,6 @@ export class GameOverScreen {
     this.playerName = playerName || 'STUNTPERSON';
     this.finalScore = this._calculateScore();
 
-    // Auto-save score and determine placement
     addHighScore({
       playerName: this.playerName,
       totalScore: this.finalScore,
@@ -63,7 +62,6 @@ export class GameOverScreen {
   update(dt, input) {
     this.timer += dt;
 
-    // Menu navigation
     const isGameOver = this.getIsGameOver();
     const optionCount = isGameOver ? 2 : 1;
 
@@ -97,7 +95,6 @@ export class GameOverScreen {
   }
 
   render(ctx) {
-    // Darken background
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
     ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
@@ -107,60 +104,60 @@ export class GameOverScreen {
     // Title
     ctx.textAlign = 'center';
     ctx.fillStyle = info.isGameOver ? '#ff4444' : '#44ff44';
-    ctx.font = 'bold 14px monospace';
-    ctx.fillText(`${info.icon} ${info.message}`, cx, 35);
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText(`${info.icon} ${info.message}`, cx, 70);
 
-    // Paycheck stub styling
+    // Paycheck stub
     ctx.fillStyle = '#f0e8d0';
-    ctx.fillRect(60, 50, VIEWPORT_WIDTH - 120, 150);
+    ctx.fillRect(120, 100, VIEWPORT_WIDTH - 240, 300);
 
     ctx.fillStyle = '#333333';
-    ctx.font = 'bold 9px monospace';
-    ctx.fillText('STUNT PAY STUB', cx, 65);
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('STUNT PAY STUB', cx, 130);
 
-    ctx.font = '7px monospace';
+    ctx.font = '14px monospace';
     ctx.textAlign = 'left';
-    const left = 75;
-    let y = 80;
+    const left = 150;
+    let y = 160;
     const p = this.player;
 
     const baseScore = Math.floor(p.secondsOnFire * 100);
     ctx.fillStyle = '#444444';
-    ctx.fillText(`Time on Fire: ${p.secondsOnFire.toFixed(1)}s`, left, y); y += 10;
-    ctx.fillText(`Base Pay: $${baseScore}`, left, y); y += 10;
-    ctx.fillText(`Gel Bonus: +$${Math.floor((p.gel / GEL_MAX) * 200)}`, left, y); y += 10;
-    ctx.fillText(`Fuel Bonus: +$${Math.floor((p.fuel / FUEL_MAX) * 150)}`, left, y); y += 10;
-    ctx.fillText(`Combo: x${p.comboMultiplier.toFixed(1)}`, left, y); y += 10;
+    ctx.fillText(`Time on Fire: ${p.secondsOnFire.toFixed(1)}s`, left, y); y += 22;
+    ctx.fillText(`Base Pay: $${baseScore}`, left, y); y += 22;
+    ctx.fillText(`Gel Bonus: +$${Math.floor((p.gel / GEL_MAX) * 200)}`, left, y); y += 22;
+    ctx.fillText(`Fuel Bonus: +$${Math.floor((p.fuel / FUEL_MAX) * 150)}`, left, y); y += 22;
+    ctx.fillText(`Combo: x${p.comboMultiplier.toFixed(1)}`, left, y); y += 22;
 
     if (p.extrasBurned > 0) {
       ctx.fillStyle = '#cc0000';
       ctx.fillText(`Extras Burned: -$${p.extrasBurned * 500} (${p.extrasBurned} people)`, left, y);
-      y += 10;
+      y += 22;
     }
 
-    y += 5;
-    ctx.fillStyle = '#999999';
-    ctx.fillRect(left, y, VIEWPORT_WIDTH - 150, 1);
     y += 10;
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(left, y, VIEWPORT_WIDTH - 300, 1);
+    y += 20;
 
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`YOUR CHECK: $${this.finalScore.toLocaleString()}`, cx, y);
 
     // High score placement
-    y += 20;
+    y += 40;
     if (this.placement > 0 && this.placement <= 20) {
       ctx.fillStyle = '#ffaa00';
-      ctx.font = 'bold 8px monospace';
+      ctx.font = 'bold 16px monospace';
       ctx.fillText(`HIGH SCORE #${this.placement}!`, cx, y);
     }
     ctx.fillStyle = '#aaaaaa';
-    ctx.font = '7px monospace';
-    ctx.fillText(`${this.playerName}`, cx, y + 12);
+    ctx.font = '14px monospace';
+    ctx.fillText(`${this.playerName}`, cx, y + 24);
 
     // Options
-    y = VIEWPORT_HEIGHT - 40;
+    y = VIEWPORT_HEIGHT - 80;
     const isGameOver = this.getIsGameOver();
 
     if (isGameOver) {
@@ -168,12 +165,12 @@ export class GameOverScreen {
       for (let i = 0; i < options.length; i++) {
         const selected = i === this.selectedOption;
         ctx.fillStyle = selected ? '#ffcc00' : '#888888';
-        ctx.font = `${selected ? 'bold ' : ''}9px monospace`;
-        ctx.fillText(options[i], cx, y + i * 14);
+        ctx.font = `${selected ? 'bold ' : ''}18px monospace`;
+        ctx.fillText(options[i], cx, y + i * 28);
       }
     } else {
       ctx.fillStyle = '#44ff44';
-      ctx.font = 'bold 9px monospace';
+      ctx.font = 'bold 18px monospace';
       const blink = Math.sin(Date.now() / 300) > 0;
       if (blink) ctx.fillText('PRESS ENTER FOR NEXT LEVEL', cx, y);
     }

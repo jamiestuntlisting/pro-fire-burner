@@ -33,7 +33,35 @@ export class Pickup extends Entity {
     const sy = Math.floor(screen.y) + Math.sin(this.bobTimer) * 4.5;
 
     const pulse = Math.sin(this.pulseTimer) * 0.3 + 0.7;
+    const cx = sx + 18;
+    const cy = sy + 18;
+
     ctx.save();
+
+    // Large outer beacon glow
+    const beaconPulse = Math.sin(this.pulseTimer * 1.5) * 0.3 + 0.5;
+    if (this.type === PICKUP_TYPE.GEL) {
+      ctx.fillStyle = `rgba(40,120,255,${beaconPulse * 0.15})`;
+    } else {
+      ctx.fillStyle = `rgba(255,120,20,${beaconPulse * 0.15})`;
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Expanding beacon ring
+    const ringRadius = 30 + Math.sin(this.pulseTimer * 2) * 8;
+    const ringAlpha = (1 - (ringRadius - 30) / 8) * 0.4;
+    ctx.lineWidth = 2;
+    if (this.type === PICKUP_TYPE.GEL) {
+      ctx.strokeStyle = `rgba(80,160,255,${Math.max(0, ringAlpha)})`;
+    } else {
+      ctx.strokeStyle = `rgba(255,160,40,${Math.max(0, ringAlpha)})`;
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
     ctx.globalAlpha = pulse;
 
     if (this.type === PICKUP_TYPE.GEL) {
