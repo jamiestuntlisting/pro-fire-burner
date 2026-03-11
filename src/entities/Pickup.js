@@ -9,8 +9,8 @@ export class Pickup extends Entity {
   constructor(x, y, type) {
     super(x, y);
     this.type = type;
-    this.width = 12;
-    this.height = 12;
+    this.width = 36;
+    this.height = 36;
     this.pulseTimer = Math.random() * Math.PI * 2;
     this.collected = false;
     this.bobTimer = Math.random() * Math.PI * 2;
@@ -30,7 +30,7 @@ export class Pickup extends Entity {
     if (this.dead) return;
     const screen = camera.worldToScreen(this.x, this.y);
     const sx = Math.floor(screen.x);
-    const sy = Math.floor(screen.y) + Math.sin(this.bobTimer) * 1.5;
+    const sy = Math.floor(screen.y) + Math.sin(this.bobTimer) * 4.5;
 
     const pulse = Math.sin(this.pulseTimer) * 0.3 + 0.7;
     ctx.save();
@@ -47,106 +47,160 @@ export class Pickup extends Entity {
   }
 
   _renderGelBottle(ctx, sx, sy) {
-    // Glow effect
-    ctx.fillStyle = 'rgba(50,120,255,0.15)';
+    // Outer glow effect - blue energy field
+    ctx.fillStyle = 'rgba(20,60,180,0.12)';
     ctx.beginPath();
-    ctx.arc(sx + 6, sy + 6, 8, 0, Math.PI * 2);
+    ctx.arc(sx + 18, sy + 18, 24, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bottle body - blue translucent gel tube
-    const bodyGrad = ctx.createLinearGradient(sx + 2, sy + 3, sx + 10, sy + 11);
-    bodyGrad.addColorStop(0, '#3388ff');
-    bodyGrad.addColorStop(0.4, '#55aaff');
-    bodyGrad.addColorStop(0.6, '#2266dd');
-    bodyGrad.addColorStop(1, '#1144aa');
-    ctx.fillStyle = bodyGrad;
-    this._roundRect(ctx, sx + 2, sy + 3, 8, 8, 2);
+    // Inner glow ring
+    ctx.fillStyle = 'rgba(40,100,255,0.18)';
+    ctx.beginPath();
+    ctx.arc(sx + 18, sy + 18, 18, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Gel level inside (sloshing)
+    // Canister body - dark industrial shell
+    const shellGrad = ctx.createLinearGradient(sx + 6, sy + 9, sx + 30, sy + 33);
+    shellGrad.addColorStop(0, '#1a2a3a');
+    shellGrad.addColorStop(0.3, '#253545');
+    shellGrad.addColorStop(0.7, '#152535');
+    shellGrad.addColorStop(1, '#0a1520');
+    ctx.fillStyle = shellGrad;
+    this._roundRect(ctx, sx + 6, sy + 9, 24, 24, 6);
+
+    // Inner containment window - glowing blue energy
+    const energyGrad = ctx.createLinearGradient(sx + 9, sy + 12, sx + 27, sy + 30);
+    energyGrad.addColorStop(0, '#2266dd');
+    energyGrad.addColorStop(0.3, '#3399ff');
+    energyGrad.addColorStop(0.6, '#1155cc');
+    energyGrad.addColorStop(1, '#0a3388');
+    ctx.fillStyle = energyGrad;
+    this._roundRect(ctx, sx + 9, sy + 12, 18, 18, 3);
+
+    // Gel energy level inside (sloshing)
     const gelLevel = 0.6 + Math.sin(this.pulseTimer * 1.5) * 0.1;
-    ctx.fillStyle = 'rgba(100,200,255,0.5)';
-    const gelTop = sy + 3 + (1 - gelLevel) * 8;
-    ctx.fillRect(sx + 3, gelTop, 6, sy + 11 - gelTop);
+    ctx.fillStyle = 'rgba(80,180,255,0.5)';
+    const gelTop = sy + 12 + (1 - gelLevel) * 18;
+    ctx.fillRect(sx + 10, gelTop, 16, sy + 30 - gelTop);
 
-    // Cap/nozzle
-    ctx.fillStyle = '#88ccff';
-    this._roundRect(ctx, sx + 4, sy + 1, 4, 3, 1);
+    // Top collar / seal ring
+    ctx.fillStyle = '#2a3a4a';
+    this._roundRect(ctx, sx + 9, sy + 6, 18, 6, 3);
 
-    // Pump top
-    ctx.fillStyle = '#aaddff';
-    ctx.fillRect(sx + 5, sy, 2, 2);
+    // Pressure valve on top
+    ctx.fillStyle = '#3a4a5a';
+    ctx.fillRect(sx + 15, sy + 0, 6, 6);
+    ctx.fillStyle = '#4a5a6a';
+    ctx.fillRect(sx + 15, sy + 0, 6, 3);
 
-    // Label "GEL" indicator
-    ctx.fillStyle = '#ffffff';
+    // Side metal ridges
+    ctx.fillStyle = 'rgba(100,140,180,0.2)';
+    ctx.fillRect(sx + 6, sy + 15, 24, 2);
+    ctx.fillRect(sx + 6, sy + 27, 24, 2);
+
+    // Label stripe indicator
+    ctx.fillStyle = 'rgba(100,200,255,0.6)';
     ctx.globalAlpha = 0.7;
-    ctx.fillRect(sx + 3, sy + 6, 6, 1);
+    ctx.fillRect(sx + 9, sy + 18, 18, 3);
     ctx.globalAlpha = 1;
 
-    // Shine highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fillRect(sx + 3, sy + 4, 2, 3);
+    // Metallic shine highlight
+    ctx.fillStyle = 'rgba(150,200,255,0.25)';
+    ctx.fillRect(sx + 9, sy + 12, 6, 9);
 
-    // Sparkle
+    // Energy sparkle
     const sparkle = Math.sin(this.pulseTimer * 5) * 0.5 + 0.5;
-    ctx.fillStyle = `rgba(180,220,255,${sparkle * 0.8})`;
+    ctx.fillStyle = `rgba(140,200,255,${sparkle * 0.9})`;
     ctx.beginPath();
-    ctx.arc(sx + 8, sy + 4, 1.5, 0, Math.PI * 2);
+    ctx.arc(sx + 24, sy + 12, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Secondary sparkle
+    ctx.fillStyle = `rgba(180,220,255,${(1 - sparkle) * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(sx + 12, sy + 24, 3, 0, Math.PI * 2);
     ctx.fill();
   }
 
   _renderFuelCan(ctx, sx, sy) {
-    // Glow effect
-    ctx.fillStyle = 'rgba(255,100,0,0.12)';
+    // Outer glow effect - orange energy field
+    ctx.fillStyle = 'rgba(180,60,0,0.10)';
     ctx.beginPath();
-    ctx.arc(sx + 6, sy + 6, 8, 0, Math.PI * 2);
+    ctx.arc(sx + 18, sy + 18, 24, 0, Math.PI * 2);
     ctx.fill();
 
-    // Gas can body
-    const canGrad = ctx.createLinearGradient(sx + 1, sy + 3, sx + 11, sy + 11);
-    canGrad.addColorStop(0, '#dd5500');
-    canGrad.addColorStop(0.3, '#ff7722');
-    canGrad.addColorStop(0.7, '#cc4400');
-    canGrad.addColorStop(1, '#993300');
-    ctx.fillStyle = canGrad;
-    this._roundRect(ctx, sx + 1, sy + 3, 10, 8, 2);
-
-    // Handle on top
-    ctx.strokeStyle = '#884400';
-    ctx.lineWidth = 1.5;
+    // Inner glow ring
+    ctx.fillStyle = 'rgba(255,80,0,0.15)';
     ctx.beginPath();
-    ctx.moveTo(sx + 3, sy + 3);
-    ctx.quadraticCurveTo(sx + 6, sy, sx + 9, sy + 3);
+    ctx.arc(sx + 18, sy + 18, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Power cell body - dark armored shell
+    const cellGrad = ctx.createLinearGradient(sx + 3, sy + 9, sx + 33, sy + 33);
+    cellGrad.addColorStop(0, '#2a1a0a');
+    cellGrad.addColorStop(0.3, '#3a2515');
+    cellGrad.addColorStop(0.7, '#2a1a0a');
+    cellGrad.addColorStop(1, '#1a0f05');
+    ctx.fillStyle = cellGrad;
+    this._roundRect(ctx, sx + 3, sy + 9, 30, 24, 6);
+
+    // Inner energy core - orange power glow
+    const coreGrad = ctx.createLinearGradient(sx + 6, sy + 12, sx + 30, sy + 30);
+    coreGrad.addColorStop(0, '#cc4400');
+    coreGrad.addColorStop(0.3, '#ff6622');
+    coreGrad.addColorStop(0.7, '#bb3300');
+    coreGrad.addColorStop(1, '#882200');
+    ctx.fillStyle = coreGrad;
+    this._roundRect(ctx, sx + 6, sy + 12, 24, 18, 3);
+
+    // Top handle / connector arch
+    ctx.strokeStyle = '#3a2a1a';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(sx + 9, sy + 9);
+    ctx.quadraticCurveTo(sx + 18, sy + 0, sx + 27, sy + 9);
     ctx.stroke();
 
-    // Spout/nozzle
-    ctx.fillStyle = '#666666';
-    ctx.fillRect(sx + 9, sy + 1, 2, 4);
-    ctx.fillStyle = '#888888';
-    ctx.fillRect(sx + 9, sy + 1, 2, 1);
+    // Power conduit / nozzle
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(sx + 27, sy + 3, 6, 12);
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(sx + 27, sy + 3, 6, 3);
 
-    // Flame logo on can
+    // Hazard energy symbol on cell
     ctx.fillStyle = '#ffaa00';
     ctx.beginPath();
-    ctx.moveTo(sx + 6, sy + 5);
-    ctx.lineTo(sx + 8, sy + 8);
-    ctx.lineTo(sx + 6, sy + 7);
-    ctx.lineTo(sx + 4, sy + 8);
+    ctx.moveTo(sx + 18, sy + 15);
+    ctx.lineTo(sx + 24, sy + 24);
+    ctx.lineTo(sx + 18, sy + 21);
+    ctx.lineTo(sx + 12, sy + 24);
     ctx.closePath();
     ctx.fill();
 
+    // Side armor ridges
+    ctx.fillStyle = 'rgba(255,180,100,0.15)';
+    ctx.fillRect(sx + 3, sy + 15, 30, 2);
+    ctx.fillRect(sx + 3, sy + 27, 30, 2);
+
     // Metallic ridge line
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.fillRect(sx + 2, sy + 6, 8, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(sx + 6, sy + 18, 24, 3);
 
-    // Shine
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillRect(sx + 2, sy + 4, 2, 3);
+    // Shine highlight
+    ctx.fillStyle = 'rgba(255,200,150,0.25)';
+    ctx.fillRect(sx + 6, sy + 12, 6, 9);
 
-    // Drip from nozzle
+    // Energy drip from conduit
     const drip = Math.sin(this.pulseTimer * 4) * 0.5 + 0.5;
-    ctx.fillStyle = `rgba(255,150,0,${drip * 0.6})`;
+    ctx.fillStyle = `rgba(255,120,0,${drip * 0.7})`;
     ctx.beginPath();
-    ctx.arc(sx + 10, sy + 5 + drip * 2, 1, 0, Math.PI * 2);
+    ctx.arc(sx + 30, sy + 15 + drip * 6, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Secondary pulse glow
+    ctx.fillStyle = `rgba(255,150,50,${(1 - drip) * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(sx + 12, sy + 24, 3, 0, Math.PI * 2);
     ctx.fill();
   }
 

@@ -228,12 +228,12 @@ export class Game {
     // Play sounds immediately
     if (reason === 'SPLASHDOWN') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 30, {
-        r: 100, g: 150, b: 255, life: 1.0, spread: 50,
+        r: 100, g: 150, b: 255, life: 1.0, spread: 150,
       });
       this.soundManager.playSplash();
     } else if (reason === 'CLEAN_BURN') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 20, {
-        r: 255, g: 255, b: 100, life: 1.5, spread: 30,
+        r: 255, g: 255, b: 100, life: 1.5, spread: 90,
       });
     }
 
@@ -372,7 +372,7 @@ export class Game {
       if (this.cameraCar) this.cameraCar.activate();
 
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 40, {
-        r: 255, g: 150, b: 0, life: 0.8, spread: 60,
+        r: 255, g: 150, b: 0, life: 0.8, spread: 180,
       });
       this.soundManager.playIgnition();
 
@@ -547,8 +547,8 @@ export class Game {
             this.player.resetCombo();
             this.hitStopFrames = 4;
             this.soundManager.playPanic();
-            this.particles.emitBurst(entity.getCenterX(), entity.getCenterY() - 8, 3, {
-              r: 255, g: 50, b: 50, vy: -20, life: 1.5, size: 1, spread: 5,
+            this.particles.emitBurst(entity.getCenterX(), entity.getCenterY() - 24, 3, {
+              r: 255, g: 50, b: 50, vy: -60, life: 1.5, size: 3, spread: 15,
             });
           }
         }
@@ -649,79 +649,62 @@ export class Game {
 
     switch (this.endReason) {
       case 'BURNED':
-        // Char/smoke particles rising
         if (Math.random() < 0.3) {
-          this.particles.emitBurst(px + (Math.random() - 0.5) * 10, py, 1, {
-            r: 80, g: 80, b: 80, life: 1.0, spread: 8, vy: -30,
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 30, py, 1, {
+            r: 80, g: 80, b: 80, life: 1.0, spread: 24, vy: -90,
           });
         }
-        if (t > 0.5 && t < 0.6) {
-          this.player.extinguish();
-        }
+        if (t > 0.5 && t < 0.6) this.player.extinguish();
         break;
 
       case 'EXTINGUISHED':
-        // Steam/fog rising from player
         if (Math.random() < 0.4) {
-          this.particles.emitBurst(px + (Math.random() - 0.5) * 8, py - 5, 1, {
-            r: 200, g: 220, b: 240, life: 0.8, spread: 5, vy: -20,
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 24, py - 15, 1, {
+            r: 200, g: 220, b: 240, life: 0.8, spread: 15, vy: -60,
           });
         }
         break;
 
       case 'SPLASHDOWN':
-        // Water ripple bursts
         if (t < 0.3 && Math.random() < 0.5) {
           this.particles.emitBurst(px, py, 2, {
-            r: 100, g: 150, b: 255, life: 0.6, spread: 20,
+            r: 100, g: 150, b: 255, life: 0.6, spread: 60,
           });
         }
         break;
 
       case 'ROADKILL':
-        // Impact shake
-        if (t < 0.3) {
-          this.camera.shake(5, 0.1);
-        }
-        // Debris
+        if (t < 0.3) this.camera.shake(8, 0.1);
         if (t < 0.2 && Math.random() < 0.5) {
           this.particles.emitBurst(px, py, 3, {
-            r: 150, g: 120, b: 80, life: 0.8, spread: 30,
+            r: 150, g: 120, b: 80, life: 0.8, spread: 90,
           });
         }
         break;
 
       case 'LOST_THE_SHOT':
-        // Film strip particles
         if (Math.random() < 0.2) {
-          this.particles.emitBurst(px + (Math.random() - 0.5) * 20, py - 10, 1, {
-            r: 50, g: 50, b: 50, life: 1.0, spread: 10,
+          this.particles.emitBurst(px + (Math.random() - 0.5) * 60, py - 30, 1, {
+            r: 50, g: 50, b: 50, life: 1.0, spread: 30,
           });
         }
         break;
 
       case 'CLEAN_BURN':
-        // Victory sparkles
         if (Math.random() < 0.4) {
           this.particles.emitBurst(
-            px + (Math.random() - 0.5) * 20,
-            py + (Math.random() - 0.5) * 20,
-            1, {
-              r: 255, g: 255, b: 100, life: 0.8, spread: 15,
-            }
+            px + (Math.random() - 0.5) * 60,
+            py + (Math.random() - 0.5) * 60,
+            1, { r: 255, g: 255, b: 100, life: 0.8, spread: 45 }
           );
         }
-        // Slow zoom out
-        if (t < 0.5) {
-          this.camera.zoomTo(0.95);
-        }
+        if (t < 0.5) this.camera.zoomTo(0.95);
         break;
 
       case 'SAFE_OUT':
-        // Thumbs up sparkle
         if (Math.random() < 0.3) {
-          this.particles.emitBurst(px, py - 15, 1, {
-            r: 100, g: 255, b: 100, life: 0.6, spread: 8,
+          this.particles.emitBurst(px, py - 45, 1, {
+            r: 100, g: 255, b: 100, life: 0.6, spread: 24,
           });
         }
         break;

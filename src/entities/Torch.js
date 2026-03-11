@@ -5,8 +5,8 @@ import { distance } from '../utils/math.js';
 export class Torch extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 8;
-    this.height = 16;
+    this.width = 24;
+    this.height = 48;
     this.effectRadius = TORCH_EFFECT_RADIUS * TILE_SIZE;
     this.drainMultiplier = TORCH_DRAIN_MULTIPLIER;
     this.flameTimer = 0;
@@ -36,85 +36,134 @@ export class Torch extends Entity {
     ctx.save();
 
     // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(sx + 4, sy + 16, 4, 1.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 12, sy + 48, 12, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pole (wood grain effect)
-    const poleGrad = ctx.createLinearGradient(sx + 2, sy + 6, sx + 6, sy + 16);
-    poleGrad.addColorStop(0, '#887766');
-    poleGrad.addColorStop(0.3, '#776655');
-    poleGrad.addColorStop(0.5, '#665544');
-    poleGrad.addColorStop(0.7, '#776655');
-    poleGrad.addColorStop(1, '#554433');
-    ctx.fillStyle = poleGrad;
-    this._roundRect(ctx, sx + 2, sy + 6, 4, 10, 1);
+    // Industrial mounting base - heavy bolted plate
+    const basePlateGrad = ctx.createLinearGradient(sx - 3, sy + 42, sx + 27, sy + 48);
+    basePlateGrad.addColorStop(0, '#2a2a2a');
+    basePlateGrad.addColorStop(0.3, '#3a3a3a');
+    basePlateGrad.addColorStop(0.7, '#333333');
+    basePlateGrad.addColorStop(1, '#1e1e1e');
+    ctx.fillStyle = basePlateGrad;
+    this._roundRect(ctx, sx - 3, sy + 42, 30, 6, 2);
 
-    // Wood grain lines
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 0.5;
+    // Base plate bolts
+    ctx.fillStyle = '#555555';
     ctx.beginPath();
-    ctx.moveTo(sx + 3, sy + 7);
-    ctx.lineTo(sx + 3, sy + 15);
-    ctx.moveTo(sx + 5, sy + 8);
-    ctx.lineTo(sx + 5, sy + 14);
-    ctx.stroke();
-
-    // Base (stone/metal)
-    const baseGrad = ctx.createLinearGradient(sx, sy + 14, sx + 8, sy + 16);
-    baseGrad.addColorStop(0, '#666666');
-    baseGrad.addColorStop(0.5, '#888888');
-    baseGrad.addColorStop(1, '#555555');
-    ctx.fillStyle = baseGrad;
-    this._roundRect(ctx, sx, sy + 14, 8, 2, 1);
-
-    // Bowl/brazier
-    const bowlGrad = ctx.createLinearGradient(sx - 1, sy + 4, sx + 9, sy + 7);
-    bowlGrad.addColorStop(0, '#998877');
-    bowlGrad.addColorStop(0.3, '#aa9988');
-    bowlGrad.addColorStop(0.7, '#887766');
-    bowlGrad.addColorStop(1, '#776655');
-    ctx.fillStyle = bowlGrad;
+    ctx.arc(sx + 1, sy + 45, 1.5, 0, Math.PI * 2);
+    ctx.arc(sx + 23, sy + 45, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#222222';
     ctx.beginPath();
-    ctx.moveTo(sx - 1, sy + 4);
-    ctx.lineTo(sx + 9, sy + 4);
-    ctx.lineTo(sx + 8, sy + 7);
-    ctx.lineTo(sx, sy + 7);
+    ctx.arc(sx + 1, sy + 45, 0.8, 0, Math.PI * 2);
+    ctx.arc(sx + 23, sy + 45, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main pipe/column - dark gunmetal
+    const pipeGrad = ctx.createLinearGradient(sx + 6, sy + 18, sx + 18, sy + 42);
+    pipeGrad.addColorStop(0, '#3d3d3d');
+    pipeGrad.addColorStop(0.15, '#4a4a4a');
+    pipeGrad.addColorStop(0.3, '#383838');
+    pipeGrad.addColorStop(0.5, '#444444');
+    pipeGrad.addColorStop(0.7, '#353535');
+    pipeGrad.addColorStop(1, '#2a2a2a');
+    ctx.fillStyle = pipeGrad;
+    this._roundRect(ctx, sx + 6, sy + 18, 12, 24, 3);
+
+    // Pipe specular highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(sx + 7, sy + 19, 3, 22);
+
+    // Pipe rivet band - upper
+    const rivetGrad = ctx.createLinearGradient(sx + 4, sy + 22, sx + 20, sy + 26);
+    rivetGrad.addColorStop(0, '#2e2e2e');
+    rivetGrad.addColorStop(0.5, '#404040');
+    rivetGrad.addColorStop(1, '#252525');
+    ctx.fillStyle = rivetGrad;
+    this._roundRect(ctx, sx + 4, sy + 22, 16, 4, 1);
+
+    // Pipe rivet band - lower
+    ctx.fillStyle = rivetGrad;
+    this._roundRect(ctx, sx + 4, sy + 36, 16, 4, 1);
+
+    // Rivets on bands
+    ctx.fillStyle = '#555555';
+    [24, 38].forEach(bandY => {
+      ctx.beginPath();
+      ctx.arc(sx + 6, sy + bandY, 1, 0, Math.PI * 2);
+      ctx.arc(sx + 18, sy + bandY, 1, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Vent housing / heat emitter head
+    const ventGrad = ctx.createLinearGradient(sx - 3, sy + 12, sx + 27, sy + 21);
+    ventGrad.addColorStop(0, '#3a2a20');
+    ventGrad.addColorStop(0.2, '#4a3a30');
+    ventGrad.addColorStop(0.5, '#3d2d22');
+    ventGrad.addColorStop(0.8, '#4a3a30');
+    ventGrad.addColorStop(1, '#2e1e14');
+    ctx.fillStyle = ventGrad;
+    ctx.beginPath();
+    ctx.moveTo(sx - 3, sy + 12);
+    ctx.lineTo(sx + 27, sy + 12);
+    ctx.lineTo(sx + 24, sy + 21);
+    ctx.lineTo(sx, sy + 21);
     ctx.closePath();
     ctx.fill();
 
+    // Vent slats (dark horizontal lines)
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const slotY = sy + 14 + i * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(sx + 1, slotY);
+      ctx.lineTo(sx + 23, slotY);
+      ctx.stroke();
+    }
+
+    // Heat glow from vent interior
+    const ventGlow = ctx.createLinearGradient(sx + 3, sy + 13, sx + 21, sy + 20);
+    ventGlow.addColorStop(0, 'rgba(180,60,10,0.15)');
+    ventGlow.addColorStop(0.5, 'rgba(220,80,10,0.2)');
+    ventGlow.addColorStop(1, 'rgba(180,60,10,0.1)');
+    ctx.fillStyle = ventGlow;
+    ctx.fillRect(sx + 1, sy + 13, 22, 7);
+
     // Flame glow (ambient)
     const flicker = Math.sin(this.flickerTimer * 12) * 0.3 + 0.7;
-    ctx.fillStyle = `rgba(255,150,30,${0.15 * flicker})`;
+    ctx.fillStyle = `rgba(200,80,10,${0.12 * flicker})`;
     ctx.beginPath();
-    ctx.arc(sx + 4, sy + 2, 8, 0, Math.PI * 2);
+    ctx.arc(sx + 12, sy + 6, 24, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main flame body
-    const flameH = 5 + Math.sin(this.flickerTimer * 8) * 1;
-    const flameGrad = ctx.createRadialGradient(sx + 4, sy + 2, 0, sx + 4, sy + 1, flameH);
-    flameGrad.addColorStop(0, 'rgba(255,255,220,0.95)');
-    flameGrad.addColorStop(0.2, 'rgba(255,220,80,0.9)');
-    flameGrad.addColorStop(0.5, 'rgba(255,150,20,0.7)');
-    flameGrad.addColorStop(0.8, 'rgba(255,80,0,0.4)');
-    flameGrad.addColorStop(1, 'rgba(200,40,0,0)');
+    // Main flame body - more orange/industrial
+    const flameH = 15 + Math.sin(this.flickerTimer * 8) * 3;
+    const flameGrad = ctx.createRadialGradient(sx + 12, sy + 6, 0, sx + 12, sy + 3, flameH);
+    flameGrad.addColorStop(0, 'rgba(255,230,180,0.9)');
+    flameGrad.addColorStop(0.2, 'rgba(255,160,40,0.85)');
+    flameGrad.addColorStop(0.5, 'rgba(220,100,10,0.6)');
+    flameGrad.addColorStop(0.8, 'rgba(180,50,0,0.3)');
+    flameGrad.addColorStop(1, 'rgba(120,20,0,0)');
     ctx.fillStyle = flameGrad;
 
     // Organic flame shape
     ctx.beginPath();
-    const wobble1 = Math.sin(this.flickerTimer * 10) * 0.8;
-    const wobble2 = Math.cos(this.flickerTimer * 7) * 0.6;
-    ctx.moveTo(sx + 1, sy + 5);
-    ctx.quadraticCurveTo(sx + 1 + wobble1, sy + 1, sx + 4, sy - flameH + 3);
-    ctx.quadraticCurveTo(sx + 7 + wobble2, sy + 1, sx + 7, sy + 5);
+    const wobble1 = Math.sin(this.flickerTimer * 10) * 2.4;
+    const wobble2 = Math.cos(this.flickerTimer * 7) * 1.8;
+    ctx.moveTo(sx + 3, sy + 15);
+    ctx.quadraticCurveTo(sx + 3 + wobble1, sy + 3, sx + 12, sy - flameH + 9);
+    ctx.quadraticCurveTo(sx + 21 + wobble2, sy + 3, sx + 21, sy + 15);
     ctx.closePath();
     ctx.fill();
 
     // Inner white-hot core
-    ctx.fillStyle = 'rgba(255,255,200,0.6)';
+    ctx.fillStyle = 'rgba(255,220,160,0.5)';
     ctx.beginPath();
-    ctx.ellipse(sx + 4, sy + 3, 1.5, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 12, sy + 9, 4.5, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Danger zone glow

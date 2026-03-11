@@ -5,8 +5,8 @@ import { pointInCone } from '../utils/math.js';
 export class FilmCamera extends Entity {
   constructor(x, y, config) {
     super(x, y);
-    this.width = 16;
-    this.height = 16;
+    this.width = 48;
+    this.height = 48;
 
     this.panSpeed = (config && config.cameraPanSpeed) || 30;
     this.panDirection = 1;
@@ -80,105 +80,189 @@ export class FilmCamera extends Entity {
 
     ctx.save();
 
-    // Tripod legs
-    ctx.strokeStyle = '#555555';
+    // Tripod legs — heavy industrial mounting struts
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(sx + 12, sy + 36);
+    ctx.lineTo(sx + 3, sy + 48);
+    ctx.moveTo(sx + 24, sy + 39);
+    ctx.lineTo(sx + 24, sy + 48);
+    ctx.moveTo(sx + 36, sy + 36);
+    ctx.lineTo(sx + 45, sy + 48);
+    ctx.stroke();
+
+    // Reinforcement bolts on struts
+    ctx.fillStyle = '#505050';
+    ctx.beginPath();
+    ctx.arc(sx + 12, sy + 36, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sx + 36, sy + 36, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tripod plate — thick armored mounting plate
+    ctx.fillStyle = '#2a2a2a';
+    this._roundRect(ctx, sx + 9, sy + 33, 30, 6, 3);
+    // Plate edge highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(sx + 10, sy + 33, 28, 1);
+
+    // Camera body — dark industrial housing
+    const bodyGrad = ctx.createLinearGradient(sx + 3, sy + 9, sx + 45, sy + 36);
+    bodyGrad.addColorStop(0, '#1a1a1e');
+    bodyGrad.addColorStop(0.2, '#222228');
+    bodyGrad.addColorStop(0.5, '#1c1c22');
+    bodyGrad.addColorStop(0.8, '#151518');
+    bodyGrad.addColorStop(1, '#0e0e12');
+    ctx.fillStyle = bodyGrad;
+    this._roundRect(ctx, sx + 3, sy + 9, 42, 27, 6);
+
+    // Outer casing bevel — top edge
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(sx + 6, sy + 9, 36, 2);
+
+    // Bottom shadow edge
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(sx + 6, sy + 34, 36, 2);
+
+    // Side panel grooves (ventilation/industrial detail)
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(sx + 6, sy + 14 + i * 5);
+      ctx.lineTo(sx + 12, sy + 14 + i * 5);
+      ctx.stroke();
+    }
+
+    // Lens — large surveillance optic
+    const lensCx = sx + 24;
+    const lensCy = sy + 21;
+
+    // Outer lens ring — dark metal
+    ctx.fillStyle = '#0a0a0e';
+    ctx.beginPath();
+    ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lens ring detail
+    ctx.strokeStyle = '#333338';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(sx + 4, sy + 12);
-    ctx.lineTo(sx + 1, sy + 16);
-    ctx.moveTo(sx + 8, sy + 13);
-    ctx.lineTo(sx + 8, sy + 16);
-    ctx.moveTo(sx + 12, sy + 12);
-    ctx.lineTo(sx + 15, sy + 16);
+    ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Tripod plate
-    ctx.fillStyle = '#444444';
-    this._roundRect(ctx, sx + 3, sy + 11, 10, 2, 1);
-
-    // Camera body
-    const bodyGrad = ctx.createLinearGradient(sx + 1, sy + 3, sx + 15, sy + 12);
-    bodyGrad.addColorStop(0, '#2a2a2a');
-    bodyGrad.addColorStop(0.3, '#3a3a3a');
-    bodyGrad.addColorStop(0.7, '#252525');
-    bodyGrad.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = bodyGrad;
-    this._roundRect(ctx, sx + 1, sy + 3, 14, 9, 2);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(sx + 2, sy + 3, 12, 1);
-
-    // Lens
-    const lensCx = sx + 8;
-    const lensCy = sy + 7;
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    const lensGrad = ctx.createRadialGradient(lensCx - 1, lensCy - 1, 0, lensCx, lensCy, 3.5);
-    lensGrad.addColorStop(0, '#6688cc');
-    lensGrad.addColorStop(0.3, '#4466aa');
-    lensGrad.addColorStop(0.7, '#334488');
-    lensGrad.addColorStop(1, '#223366');
+    // Inner lens — cold surveillance glow
+    const lensGrad = ctx.createRadialGradient(lensCx - 3, lensCy - 3, 0, lensCx, lensCy, 10.5);
+    lensGrad.addColorStop(0, '#4a6080');
+    lensGrad.addColorStop(0.2, '#3a5070');
+    lensGrad.addColorStop(0.5, '#2a3a55');
+    lensGrad.addColorStop(0.8, '#1a2840');
+    lensGrad.addColorStop(1, '#101828');
     ctx.fillStyle = lensGrad;
     ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 3.5, 0, Math.PI * 2);
+    ctx.arc(lensCx, lensCy, 10.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#556688';
-    ctx.lineWidth = 0.5;
+    // Iris ring
+    ctx.strokeStyle = '#3a4a60';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 2, 0, Math.PI * 2);
+    ctx.arc(lensCx, lensCy, 6, 0, Math.PI * 2);
     ctx.stroke();
 
-    if (Math.sin(this.lensFlashTimer * 2) > 0.8) {
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    // Inner iris detail lines
+    ctx.strokeStyle = 'rgba(60,80,110,0.4)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4;
       ctx.beginPath();
-      ctx.arc(lensCx - 1, lensCy - 1, 1.5, 0, Math.PI * 2);
+      ctx.moveTo(lensCx + Math.cos(a) * 4, lensCy + Math.sin(a) * 4);
+      ctx.lineTo(lensCx + Math.cos(a) * 9, lensCy + Math.sin(a) * 9);
+      ctx.stroke();
+    }
+
+    // Lens flare
+    if (Math.sin(this.lensFlashTimer * 2) > 0.8) {
+      ctx.fillStyle = 'rgba(200,220,255,0.5)';
+      ctx.beginPath();
+      ctx.arc(lensCx - 3, lensCy - 3, 4.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    // Specular highlight
+    ctx.fillStyle = 'rgba(180,200,230,0.12)';
     ctx.beginPath();
-    ctx.arc(lensCx - 1, lensCy - 1, 1, 0, Math.PI * 2);
+    ctx.arc(lensCx - 3, lensCy - 3, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Recording light
+    // Recording light — threat indicator
     const recPulse = Math.sin(this.recordingPulse * 4) * 0.3 + 0.7;
     ctx.fillStyle = `rgba(255,0,0,${recPulse})`;
     ctx.beginPath();
-    ctx.arc(sx + 13, sy + 4, 1.5, 0, Math.PI * 2);
+    ctx.arc(sx + 39, sy + 12, 4.5, 0, Math.PI * 2);
     ctx.fill();
+    // Outer glow
     ctx.fillStyle = `rgba(255,0,0,${recPulse * 0.3})`;
     ctx.beginPath();
-    ctx.arc(sx + 13, sy + 4, 3, 0, Math.PI * 2);
+    ctx.arc(sx + 39, sy + 12, 9, 0, Math.PI * 2);
+    ctx.fill();
+    // Secondary scan pulse
+    ctx.fillStyle = `rgba(255,30,0,${recPulse * 0.1})`;
+    ctx.beginPath();
+    ctx.arc(sx + 39, sy + 12, 14, 0, Math.PI * 2);
     ctx.fill();
 
-    // Film reel
-    ctx.fillStyle = '#333333';
+    // Film reel — heavy industrial spool
+    ctx.fillStyle = '#1a1a1e';
     ctx.beginPath();
-    ctx.arc(sx + 3, sy + 2, 3, 0, Math.PI * 2);
+    ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#555555';
-    ctx.lineWidth = 0.5;
+
+    // Reel outer ring
+    ctx.strokeStyle = '#333338';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Reel spokes
+    ctx.strokeStyle = '#444448';
+    ctx.lineWidth = 1.5;
     for (let i = 0; i < 4; i++) {
       const angle = this.reelRotation + (i * Math.PI / 2);
       ctx.beginPath();
-      ctx.moveTo(sx + 3, sy + 2);
-      ctx.lineTo(sx + 3 + Math.cos(angle) * 2.5, sy + 2 + Math.sin(angle) * 2.5);
+      ctx.moveTo(sx + 9, sy + 6);
+      ctx.lineTo(sx + 9 + Math.cos(angle) * 7.5, sy + 6 + Math.sin(angle) * 7.5);
       ctx.stroke();
     }
-    ctx.fillStyle = '#666666';
+
+    // Reel center hub
+    ctx.fillStyle = '#555558';
     ctx.beginPath();
-    ctx.arc(sx + 3, sy + 2, 1, 0, Math.PI * 2);
+    ctx.arc(sx + 9, sy + 6, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Viewfinder
-    ctx.fillStyle = '#222222';
-    this._roundRect(ctx, sx + 14, sy + 5, 3, 4, 1);
-    ctx.fillStyle = '#334455';
-    ctx.fillRect(sx + 15, sy + 6, 1, 2);
+    // Viewfinder — armored scope housing
+    ctx.fillStyle = '#141418';
+    this._roundRect(ctx, sx + 42, sy + 15, 9, 12, 3);
+    // Viewfinder screen
+    ctx.fillStyle = '#1a2530';
+    ctx.fillRect(sx + 44, sy + 18, 5, 6);
+    // Viewfinder scanline
+    const scanY = sy + 18 + ((this.lensFlashTimer * 8) % 6);
+    ctx.fillStyle = 'rgba(60,100,140,0.2)';
+    ctx.fillRect(sx + 44, scanY, 5, 1);
+
+    // Data port details on side
+    ctx.fillStyle = '#0c0c10';
+    ctx.fillRect(sx + 4, sy + 28, 4, 2);
+    ctx.fillRect(sx + 4, sy + 31, 4, 2);
+
+    // Serial number / designation mark
+    ctx.fillStyle = 'rgba(80,90,100,0.15)';
+    ctx.fillRect(sx + 16, sy + 32, 16, 2);
 
     ctx.restore();
   }

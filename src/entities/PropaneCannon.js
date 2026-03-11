@@ -5,8 +5,8 @@ import { distance } from '../utils/math.js';
 export class PropaneCannon extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 16;
-    this.height = 16;
+    this.width = 48;
+    this.height = 48;
 
     this.fireInterval = 3.5;
     this.timer = Math.random() * this.fireInterval;
@@ -68,46 +68,125 @@ export class PropaneCannon extends Entity {
     ctx.save();
 
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(sx + 8, sy + 16, 6, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 24, sy + 48, 18, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Base plate
-    const baseGrad = ctx.createLinearGradient(sx + 1, sy + 12, sx + 15, sy + 16);
-    baseGrad.addColorStop(0, '#555555');
-    baseGrad.addColorStop(0.5, '#666666');
-    baseGrad.addColorStop(1, '#444444');
+    // Heavy base plate - industrial bolted steel
+    const baseGrad = ctx.createLinearGradient(sx + 3, sy + 36, sx + 45, sy + 48);
+    baseGrad.addColorStop(0, '#2a2a2a');
+    baseGrad.addColorStop(0.3, '#383838');
+    baseGrad.addColorStop(0.5, '#333333');
+    baseGrad.addColorStop(0.7, '#383838');
+    baseGrad.addColorStop(1, '#222222');
     ctx.fillStyle = baseGrad;
-    this._roundRect(ctx, sx + 1, sy + 12, 14, 4, 2);
+    this._roundRect(ctx, sx + 3, sy + 36, 42, 12, 3);
 
-    // Tank/body (metallic cylinder)
-    const tankGrad = ctx.createLinearGradient(sx + 2, sy + 5, sx + 14, sy + 13);
-    tankGrad.addColorStop(0, '#666666');
-    tankGrad.addColorStop(0.2, '#888888');
-    tankGrad.addColorStop(0.4, '#777777');
-    tankGrad.addColorStop(0.6, '#888888');
-    tankGrad.addColorStop(1, '#555555');
+    // Base plate edge highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(sx + 4, sy + 36, 40, 2);
+
+    // Base bolts - 4 corners
+    ctx.fillStyle = '#4a4a4a';
+    [[8, 39], [40, 39], [8, 45], [40, 45]].forEach(([bx, by]) => {
+      ctx.beginPath();
+      ctx.arc(sx + bx, sy + by, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = '#1e1e1e';
+    [[8, 39], [40, 39], [8, 45], [40, 45]].forEach(([bx, by]) => {
+      ctx.beginPath();
+      ctx.arc(sx + bx, sy + by, 1, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Hydraulic support legs
+    const legGrad = ctx.createLinearGradient(sx + 6, sy + 30, sx + 14, sy + 38);
+    legGrad.addColorStop(0, '#3d3d3d');
+    legGrad.addColorStop(0.5, '#4a4a4a');
+    legGrad.addColorStop(1, '#2e2e2e');
+    ctx.fillStyle = legGrad;
+    this._roundRect(ctx, sx + 8, sy + 30, 6, 8, 1);
+    this._roundRect(ctx, sx + 34, sy + 30, 6, 8, 1);
+
+    // Main tank/body - heavy armored cylinder
+    const tankGrad = ctx.createLinearGradient(sx + 6, sy + 15, sx + 42, sy + 39);
+    tankGrad.addColorStop(0, '#333333');
+    tankGrad.addColorStop(0.1, '#444444');
+    tankGrad.addColorStop(0.25, '#3a3a3a');
+    tankGrad.addColorStop(0.4, '#474747');
+    tankGrad.addColorStop(0.6, '#3a3a3a');
+    tankGrad.addColorStop(0.8, '#444444');
+    tankGrad.addColorStop(1, '#2a2a2a');
     ctx.fillStyle = tankGrad;
-    this._roundRect(ctx, sx + 2, sy + 5, 12, 8, 3);
+    this._roundRect(ctx, sx + 6, sy + 15, 36, 24, 9);
 
-    // Tank highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(sx + 3, sy + 5, 2, 7);
+    // Tank specular highlight strip
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(sx + 9, sy + 15, 6, 21);
 
-    // Nozzle (top barrel)
-    const nozzleGrad = ctx.createLinearGradient(sx + 4, sy + 0, sx + 12, sy + 6);
-    nozzleGrad.addColorStop(0, '#444444');
-    nozzleGrad.addColorStop(0.5, '#555555');
-    nozzleGrad.addColorStop(1, '#333333');
+    // Tank dark edge
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(sx + 36, sy + 17, 4, 18);
+
+    // Hazard stripe band around tank
+    ctx.fillStyle = '#2a2200';
+    this._roundRect(ctx, sx + 6, sy + 24, 36, 5, 0);
+    // Diagonal hazard lines
+    ctx.strokeStyle = '#443300';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(sx + 8 + i * 5, sy + 24);
+      ctx.lineTo(sx + 12 + i * 5, sy + 29);
+      ctx.stroke();
+    }
+
+    // Reinforcement ring - upper
+    const ringGrad = ctx.createLinearGradient(sx + 4, sy + 16, sx + 44, sy + 20);
+    ringGrad.addColorStop(0, '#2e2e2e');
+    ringGrad.addColorStop(0.3, '#424242');
+    ringGrad.addColorStop(0.7, '#3a3a3a');
+    ringGrad.addColorStop(1, '#262626');
+    ctx.fillStyle = ringGrad;
+    this._roundRect(ctx, sx + 4, sy + 16, 40, 4, 2);
+
+    // Reinforcement ring - lower
+    ctx.fillStyle = ringGrad;
+    this._roundRect(ctx, sx + 4, sy + 32, 40, 4, 2);
+
+    // Nozzle assembly - barrel
+    const nozzleGrad = ctx.createLinearGradient(sx + 12, sy + 0, sx + 36, sy + 18);
+    nozzleGrad.addColorStop(0, '#2e2e2e');
+    nozzleGrad.addColorStop(0.3, '#3d3d3d');
+    nozzleGrad.addColorStop(0.6, '#353535');
+    nozzleGrad.addColorStop(1, '#1e1e1e');
     ctx.fillStyle = nozzleGrad;
-    this._roundRect(ctx, sx + 4, sy + 1, 8, 5, 2);
+    this._roundRect(ctx, sx + 12, sy + 3, 24, 15, 6);
 
-    // Nozzle opening
-    ctx.fillStyle = '#222222';
-    this._roundRect(ctx, sx + 5, sy - 1, 6, 3, 1);
-    ctx.fillStyle = this.state === 'IDLE' ? '#1a1a1a' : '#331100';
-    ctx.fillRect(sx + 6, sy - 1, 4, 2);
+    // Barrel cooling fins
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const finY = sy + 5 + i * 3;
+      ctx.beginPath();
+      ctx.moveTo(sx + 14, finY);
+      ctx.lineTo(sx + 34, finY);
+      ctx.stroke();
+    }
+
+    // Nozzle opening - recessed dark bore
+    const boreGrad = ctx.createLinearGradient(sx + 15, sy - 3, sx + 33, sy + 6);
+    boreGrad.addColorStop(0, '#1a1a1a');
+    boreGrad.addColorStop(0.5, '#222222');
+    boreGrad.addColorStop(1, '#151515');
+    ctx.fillStyle = boreGrad;
+    this._roundRect(ctx, sx + 15, sy - 3, 18, 9, 3);
+
+    // Inner bore - heat-stained
+    ctx.fillStyle = this.state === 'IDLE' ? '#0e0e0e' : '#2a1000';
+    ctx.fillRect(sx + 18, sy - 3, 12, 6);
 
     // Warning indicator
     if (this.state === 'WARNING') {
@@ -159,32 +238,38 @@ export class PropaneCannon extends Entity {
       ctx.globalAlpha = 1;
 
       // Flame jet from nozzle
-      const jetGrad = ctx.createLinearGradient(sx + 8, sy - 2, sx + 8, sy - 18);
+      const jetGrad = ctx.createLinearGradient(sx + 24, sy - 6, sx + 24, sy - 54);
       jetGrad.addColorStop(0, 'rgba(255,200,50,0.9)');
       jetGrad.addColorStop(0.3, 'rgba(255,130,0,0.7)');
       jetGrad.addColorStop(0.7, 'rgba(255,80,0,0.3)');
       jetGrad.addColorStop(1, 'rgba(200,40,0,0)');
       ctx.fillStyle = jetGrad;
       ctx.beginPath();
-      ctx.moveTo(sx + 5, sy - 1);
-      ctx.lineTo(sx + 11, sy - 1);
-      ctx.lineTo(sx + 13, sy - 14);
-      ctx.lineTo(sx + 3, sy - 14);
+      ctx.moveTo(sx + 15, sy - 3);
+      ctx.lineTo(sx + 33, sy - 3);
+      ctx.lineTo(sx + 39, sy - 42);
+      ctx.lineTo(sx + 9, sy - 42);
       ctx.closePath();
       ctx.fill();
     }
 
-    // Indicator light
-    const lightColor = this.state === 'IDLE' ? '#00cc00' : '#ff0000';
+    // Indicator light - larger, more visible
+    const lightColor = this.state === 'IDLE' ? '#00aa00' : '#ff0000';
     ctx.fillStyle = lightColor;
     ctx.beginPath();
-    ctx.arc(sx + 13, sy + 7, 1.5, 0, Math.PI * 2);
+    ctx.arc(sx + 39, sy + 21, 3, 0, Math.PI * 2);
     ctx.fill();
     // Light glow
-    ctx.fillStyle = this.state === 'IDLE' ? 'rgba(0,200,0,0.2)' : 'rgba(255,0,0,0.2)';
+    ctx.fillStyle = this.state === 'IDLE' ? 'rgba(0,170,0,0.2)' : 'rgba(255,0,0,0.25)';
     ctx.beginPath();
-    ctx.arc(sx + 13, sy + 7, 3, 0, Math.PI * 2);
+    ctx.arc(sx + 39, sy + 21, 7, 0, Math.PI * 2);
     ctx.fill();
+    // Light housing ring
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx + 39, sy + 21, 4, 0, Math.PI * 2);
+    ctx.stroke();
 
     ctx.restore();
   }

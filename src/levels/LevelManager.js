@@ -107,10 +107,10 @@ export class LevelManager {
 
     // Pickups
     for (const pos of ent.gelPickups) {
-      entities.push(new Pickup(pos.col * TILE_SIZE + 2, pos.row * TILE_SIZE + 2, PICKUP_TYPE.GEL));
+      entities.push(new Pickup(pos.col * TILE_SIZE + 6, pos.row * TILE_SIZE + 6, PICKUP_TYPE.GEL));
     }
     for (const pos of ent.fuelPickups) {
-      entities.push(new Pickup(pos.col * TILE_SIZE + 2, pos.row * TILE_SIZE + 2, PICKUP_TYPE.FUEL));
+      entities.push(new Pickup(pos.col * TILE_SIZE + 6, pos.row * TILE_SIZE + 6, PICKUP_TYPE.FUEL));
     }
 
     // Extras
@@ -125,7 +125,7 @@ export class LevelManager {
 
     // Torches
     for (const pos of ent.torches) {
-      entities.push(new Torch(pos.col * TILE_SIZE + 4, pos.row * TILE_SIZE));
+      entities.push(new Torch(pos.col * TILE_SIZE + 12, pos.row * TILE_SIZE));
     }
 
     // Propane cannons
@@ -138,7 +138,7 @@ export class LevelManager {
     if (config.hasCameraCar) {
       cameraCar = new CameraCar(
         generated.spawnPoint.x,
-        generated.spawnPoint.y + 150
+        generated.spawnPoint.y + 450
       );
       entities.push(cameraCar);
     }

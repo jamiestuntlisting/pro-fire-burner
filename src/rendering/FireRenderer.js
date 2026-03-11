@@ -35,27 +35,26 @@ export class FireRenderer {
     while (this.emitTimer >= emitRate) {
       this.emitTimer -= emitRate;
       const p = this.pool.acquire();
-      const flameHeight = 10 + intensity * 18;
-      p.x = playerX + randomRange(-6, 14);
-      p.y = playerY + randomRange(-6, 2);
-      p.vx = randomRange(-15, 15);
+      const flameHeight = 30 + intensity * 54;
+      p.x = playerX + randomRange(-18, 42);
+      p.y = playerY + randomRange(-18, 6);
+      p.vx = randomRange(-45, 45);
       p.vy = randomRange(-flameHeight * 6, -flameHeight * 2.5);
       p.life = randomRange(0.2, 0.55);
       p.maxLife = p.life;
-      p.size = Math.ceil(randomRange(2, 4 + intensity * 2));
+      p.size = Math.ceil(randomRange(6, 12 + intensity * 6));
 
-      // Color gradient: white core -> yellow -> orange -> red -> dark red tips
       const colorT = Math.random();
       if (colorT < 0.1) {
-        p.r = 255; p.g = 255; p.b = 200; // white hot core
+        p.r = 255; p.g = 255; p.b = 200;
       } else if (colorT < 0.3) {
-        p.r = 255; p.g = 240; p.b = 80; // bright yellow
+        p.r = 255; p.g = 240; p.b = 80;
       } else if (colorT < 0.55) {
-        p.r = 255; p.g = 180; p.b = 20; // golden orange
+        p.r = 255; p.g = 180; p.b = 20;
       } else if (colorT < 0.8) {
-        p.r = 255; p.g = 100; p.b = 0; // deep orange
+        p.r = 255; p.g = 100; p.b = 0;
       } else {
-        p.r = 220; p.g = 40; p.b = 0; // red tips
+        p.r = 220; p.g = 40; p.b = 0;
       }
       p.dead = false;
     }
@@ -74,14 +73,12 @@ export class FireRenderer {
       const screenY = Math.floor(screen.y);
       const sz = p.size * (0.5 + lifeRatio * 0.5);
 
-      // Additive-style glow
       ctx.globalAlpha = alpha * 0.3;
       ctx.fillStyle = `rgb(${p.r},${Math.min(255, p.g + 50)},${Math.min(255, p.b + 50)})`;
       ctx.beginPath();
       ctx.arc(screenX, screenY, sz * 1.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Core particle
       ctx.globalAlpha = alpha;
       ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
       ctx.beginPath();

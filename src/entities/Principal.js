@@ -24,23 +24,23 @@ export class Principal extends Extra {
     const sx = Math.floor(screen.x);
     const sy = Math.floor(screen.y);
 
-    const bobOffset = Math.sin(this.starBob) * 2;
-    const starCx = sx + 6;
-    const starCy = sy - 8 + bobOffset;
+    const bobOffset = Math.sin(this.starBob) * 6;
+    const starCx = sx + 18;
+    const starCy = sy - 24 + bobOffset;
 
     ctx.save();
 
     // Star glow
     ctx.fillStyle = 'rgba(255,220,0,0.3)';
     ctx.beginPath();
-    ctx.arc(starCx, starCy, 5, 0, Math.PI * 2);
+    ctx.arc(starCx, starCy, 15, 0, Math.PI * 2);
     ctx.fill();
 
     // Draw a proper 5-pointed star
     ctx.fillStyle = '#ffdd00';
     ctx.beginPath();
-    const outerR = 4;
-    const innerR = 1.8;
+    const outerR = 12;
+    const innerR = 5.4;
     for (let i = 0; i < 10; i++) {
       const angle = (i * Math.PI / 5) - Math.PI / 2 + this.starSpin * 0.3;
       const r = i % 2 === 0 ? outerR : innerR;
@@ -55,7 +55,7 @@ export class Principal extends Extra {
     // Inner highlight
     ctx.fillStyle = 'rgba(255,255,200,0.5)';
     ctx.beginPath();
-    ctx.arc(starCx, starCy, 1.5, 0, Math.PI * 2);
+    ctx.arc(starCx, starCy, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

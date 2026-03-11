@@ -4,11 +4,11 @@ import { PLAYER_SPEED } from '../constants.js';
 export class CameraCar extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 28;
-    this.height = 20;
+    this.width = 84;
+    this.height = 60;
     this.speed = PLAYER_SPEED * 0.85;
-    this.targetDistance = 120;
-    this.maxDistance = 300;
+    this.targetDistance = 360;
+    this.maxDistance = 900;
     this.active = false;
     this.wheelRotation = 0;
   }
@@ -33,7 +33,7 @@ export class CameraCar extends Entity {
   }
 
   hasReachedPlayer(playerY) {
-    return this.active && Math.abs(this.y - playerY) < 16;
+    return this.active && Math.abs(this.y - playerY) < 48;
   }
 
   isPlayerTooFar(playerY) {
@@ -50,117 +50,137 @@ export class CameraCar extends Entity {
     ctx.save();
 
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(sx + 14, sy + 20, 14, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 42, sy + 60, 42, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Car body (dark production vehicle)
-    const bodyGrad = ctx.createLinearGradient(sx + 2, sy + 2, sx + 26, sy + 18);
-    bodyGrad.addColorStop(0, '#2a2a3a');
-    bodyGrad.addColorStop(0.3, '#3a3a4a');
-    bodyGrad.addColorStop(0.7, '#2a2a3a');
-    bodyGrad.addColorStop(1, '#1a1a2a');
+    // Car body (dark armored production vehicle - Metroid style)
+    const bodyGrad = ctx.createLinearGradient(sx + 6, sy + 6, sx + 78, sy + 54);
+    bodyGrad.addColorStop(0, '#1a1a28');
+    bodyGrad.addColorStop(0.3, '#252535');
+    bodyGrad.addColorStop(0.7, '#1a1a28');
+    bodyGrad.addColorStop(1, '#0e0e1a');
     ctx.fillStyle = bodyGrad;
-    this._roundRect(ctx, sx + 2, sy + 3, 24, 14, 3);
+    this._roundRect(ctx, sx + 6, sy + 9, 72, 42, 9);
 
-    // Body highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.fillRect(sx + 3, sy + 3, 22, 1);
+    // Armored plating lines
+    ctx.strokeStyle = 'rgba(80,90,120,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx + 12, sy + 24);
+    ctx.lineTo(sx + 72, sy + 24);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sx + 12, sy + 36);
+    ctx.lineTo(sx + 72, sy + 36);
+    ctx.stroke();
 
-    // Windshield (angled, reflective)
-    const windGrad = ctx.createLinearGradient(sx + 5, sy + 2, sx + 23, sy + 7);
-    windGrad.addColorStop(0, '#5577aa');
-    windGrad.addColorStop(0.3, '#6688bb');
-    windGrad.addColorStop(0.7, '#4466aa');
-    windGrad.addColorStop(1, '#335588');
+    // Body highlight (subtle)
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(sx + 9, sy + 9, 66, 3);
+
+    // Windshield (angled, reflective - darker tint)
+    const windGrad = ctx.createLinearGradient(sx + 15, sy + 6, sx + 69, sy + 21);
+    windGrad.addColorStop(0, '#334466');
+    windGrad.addColorStop(0.3, '#3d5577');
+    windGrad.addColorStop(0.7, '#2a4466');
+    windGrad.addColorStop(1, '#1e3350');
     ctx.fillStyle = windGrad;
-    this._roundRect(ctx, sx + 5, sy + 2, 18, 5, 2);
+    this._roundRect(ctx, sx + 15, sy + 6, 54, 15, 6);
     // Reflection streak
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(sx + 8, sy + 2, 6, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(sx + 24, sy + 6, 18, 3);
 
-    // Headlights (warm glow)
-    const hlGrad = ctx.createRadialGradient(sx + 5, sy + 1, 0, sx + 5, sy + 1, 4);
-    hlGrad.addColorStop(0, 'rgba(255,255,200,0.5)');
-    hlGrad.addColorStop(1, 'rgba(255,255,150,0)');
+    // Headlights (cooler, more ominous glow)
+    const hlGrad = ctx.createRadialGradient(sx + 15, sy + 3, 0, sx + 15, sy + 3, 12);
+    hlGrad.addColorStop(0, 'rgba(180,200,255,0.45)');
+    hlGrad.addColorStop(1, 'rgba(150,180,255,0)');
     ctx.fillStyle = hlGrad;
     ctx.beginPath();
-    ctx.arc(sx + 5, sy + 1, 4, 0, Math.PI * 2);
+    ctx.arc(sx + 15, sy + 3, 12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#ffffcc';
-    this._roundRect(ctx, sx + 3, sy, 4, 2, 1);
+    ctx.fillStyle = '#aaccee';
+    this._roundRect(ctx, sx + 9, sy, 12, 6, 3);
 
-    const hlGrad2 = ctx.createRadialGradient(sx + 23, sy + 1, 0, sx + 23, sy + 1, 4);
-    hlGrad2.addColorStop(0, 'rgba(255,255,200,0.5)');
-    hlGrad2.addColorStop(1, 'rgba(255,255,150,0)');
+    const hlGrad2 = ctx.createRadialGradient(sx + 69, sy + 3, 0, sx + 69, sy + 3, 12);
+    hlGrad2.addColorStop(0, 'rgba(180,200,255,0.45)');
+    hlGrad2.addColorStop(1, 'rgba(150,180,255,0)');
     ctx.fillStyle = hlGrad2;
     ctx.beginPath();
-    ctx.arc(sx + 23, sy + 1, 4, 0, Math.PI * 2);
+    ctx.arc(sx + 69, sy + 3, 12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#ffffcc';
-    this._roundRect(ctx, sx + 21, sy, 4, 2, 1);
+    ctx.fillStyle = '#aaccee';
+    this._roundRect(ctx, sx + 63, sy, 12, 6, 3);
 
     // Wheels with rotation
-    for (const wx of [sx, sx + 25]) {
-      for (const wy of [sy + 4, sy + 12]) {
-        ctx.fillStyle = '#111111';
+    for (const wx of [sx, sx + 75]) {
+      for (const wy of [sy + 12, sy + 36]) {
+        ctx.fillStyle = '#0a0a0a';
         ctx.beginPath();
-        ctx.arc(wx + 1, wy + 2, 3, 0, Math.PI * 2);
+        ctx.arc(wx + 3, wy + 6, 9, 0, Math.PI * 2);
         ctx.fill();
         // Hub
-        ctx.fillStyle = '#444444';
+        ctx.fillStyle = '#333340';
         ctx.beginPath();
-        ctx.arc(wx + 1, wy + 2, 1.5, 0, Math.PI * 2);
+        ctx.arc(wx + 3, wy + 6, 4.5, 0, Math.PI * 2);
         ctx.fill();
         // Spokes
-        ctx.strokeStyle = '#333333';
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = '#252530';
+        ctx.lineWidth = 1.5;
         for (let i = 0; i < 3; i++) {
           const a = this.wheelRotation + (i * Math.PI * 2 / 3);
           ctx.beginPath();
-          ctx.moveTo(wx + 1, wy + 2);
-          ctx.lineTo(wx + 1 + Math.cos(a) * 2.5, wy + 2 + Math.sin(a) * 2.5);
+          ctx.moveTo(wx + 3, wy + 6);
+          ctx.lineTo(wx + 3 + Math.cos(a) * 7.5, wy + 6 + Math.sin(a) * 7.5);
           ctx.stroke();
         }
       }
     }
 
-    // Camera mount on top (professional rig)
-    ctx.fillStyle = '#1a1a1a';
-    this._roundRect(ctx, sx + 9, sy - 3, 10, 5, 2);
+    // Camera mount on top (heavy armored rig)
+    ctx.fillStyle = '#0e0e14';
+    this._roundRect(ctx, sx + 27, sy - 9, 30, 15, 6);
+    // Armored edge on mount
+    ctx.strokeStyle = 'rgba(60,70,100,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx + 30, sy - 9);
+    ctx.lineTo(sx + 54, sy - 9);
+    ctx.stroke();
+
     // Camera lens
-    const camLensGrad = ctx.createRadialGradient(sx + 14, sy - 1, 0, sx + 14, sy - 1, 2.5);
-    camLensGrad.addColorStop(0, '#5566aa');
-    camLensGrad.addColorStop(1, '#334466');
+    const camLensGrad = ctx.createRadialGradient(sx + 42, sy - 3, 0, sx + 42, sy - 3, 7.5);
+    camLensGrad.addColorStop(0, '#3a4477');
+    camLensGrad.addColorStop(1, '#1e2844');
     ctx.fillStyle = camLensGrad;
     ctx.beginPath();
-    ctx.arc(sx + 14, sy - 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(sx + 42, sy - 3, 7.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Recording light
     const recPulse = Math.sin(this.wheelRotation * 2) * 0.3 + 0.7;
     ctx.fillStyle = `rgba(255,0,0,${recPulse})`;
     ctx.beginPath();
-    ctx.arc(sx + 17, sy - 3, 1.5, 0, Math.PI * 2);
+    ctx.arc(sx + 51, sy - 9, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Light beams
-    ctx.globalAlpha = 0.15;
-    const beamGrad = ctx.createLinearGradient(sx + 5, sy, sx + 5, sy - 30);
-    beamGrad.addColorStop(0, 'rgba(255,255,200,0.3)');
-    beamGrad.addColorStop(1, 'rgba(255,255,150,0)');
+    // Light beams (dimmer, more menacing)
+    ctx.globalAlpha = 0.1;
+    const beamGrad = ctx.createLinearGradient(sx + 15, sy, sx + 15, sy - 90);
+    beamGrad.addColorStop(0, 'rgba(180,200,255,0.25)');
+    beamGrad.addColorStop(1, 'rgba(150,180,255,0)');
     ctx.fillStyle = beamGrad;
     ctx.beginPath();
-    ctx.moveTo(sx + 3, sy);
-    ctx.lineTo(sx - 5, sy - 30);
-    ctx.lineTo(sx + 13, sy - 30);
+    ctx.moveTo(sx + 9, sy);
+    ctx.lineTo(sx - 15, sy - 90);
+    ctx.lineTo(sx + 39, sy - 90);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(sx + 21, sy);
-    ctx.lineTo(sx + 13, sy - 30);
-    ctx.lineTo(sx + 33, sy - 30);
+    ctx.moveTo(sx + 63, sy);
+    ctx.lineTo(sx + 39, sy - 90);
+    ctx.lineTo(sx + 99, sy - 90);
     ctx.closePath();
     ctx.fill();
     ctx.globalAlpha = 1;

@@ -15,10 +15,9 @@ export const FIRE_STATE = {
 export class Player extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 14;
-    this.height = 14;
+    this.width = 42;
+    this.height = 42;
 
-    // Fire state
     this.fireState = FIRE_STATE.NOT_LIT;
     this.gel = GEL_MAX;
     this.fuel = FUEL_MAX;
@@ -26,7 +25,6 @@ export class Player extends Entity {
     this.fuelRate = FUEL_DEPLETION_BASE;
     this.drainMultiplier = 1.0;
 
-    // Movement
     this.dirX = 0;
     this.dirY = 0;
     this.facingX = 0;
@@ -34,20 +32,15 @@ export class Player extends Entity {
     this.speed = PLAYER_SPEED;
     this.inputLocked = false;
 
-    // Animation
     this.animTimer = 0;
     this.animFrame = 0;
     this.isMoving = false;
     this.breatheTimer = 0;
 
-    // Flare effect (on fuel pickup)
     this.flareTimer = 0;
     this.flareDuration = 1.5;
-
-    // Lay down state
     this.layDownTimer = 0;
 
-    // Scoring
     this.secondsOnFire = 0;
     this.extrasBurned = 0;
     this.onCameraTime = 0;
@@ -56,21 +49,13 @@ export class Player extends Entity {
     this.comboMultiplier = 1.0;
     this.comboTimer = 0;
 
-    // Costume colors (set per level)
     this.costumeColor1 = '#cc4400';
     this.costumeColor2 = '#ffaa00';
     this.costumeAccent = '#ffffff';
   }
 
-  ignite() {
-    if (this.fireState === FIRE_STATE.NOT_LIT) {
-      this.fireState = FIRE_STATE.ON_FIRE;
-    }
-  }
-
-  extinguish() {
-    this.fireState = FIRE_STATE.EXTINGUISHED;
-  }
+  ignite() { if (this.fireState === FIRE_STATE.NOT_LIT) this.fireState = FIRE_STATE.ON_FIRE; }
+  extinguish() { this.fireState = FIRE_STATE.EXTINGUISHED; }
 
   layDown() {
     if (this.fireState !== FIRE_STATE.ON_FIRE || this.inputLocked) return false;
@@ -80,27 +65,11 @@ export class Player extends Entity {
     return true;
   }
 
-  setDepletionRates(gelRate, fuelRate) {
-    this.gelRate = gelRate;
-    this.fuelRate = fuelRate;
-  }
-
-  addGel(amount) {
-    this.gel = Math.min(GEL_MAX, this.gel + (amount || GEL_PICKUP_AMOUNT));
-  }
-
-  addFuel(amount) {
-    this.fuel = Math.min(FUEL_MAX, this.fuel + (amount || FUEL_PICKUP_AMOUNT));
-    this.flareTimer = this.flareDuration;
-  }
-
-  isOnFire() {
-    return this.fireState === FIRE_STATE.ON_FIRE;
-  }
-
-  isLayingDown() {
-    return this.fireState === FIRE_STATE.LAYING_DOWN;
-  }
+  setDepletionRates(gelRate, fuelRate) { this.gelRate = gelRate; this.fuelRate = fuelRate; }
+  addGel(amount) { this.gel = Math.min(GEL_MAX, this.gel + (amount || GEL_PICKUP_AMOUNT)); }
+  addFuel(amount) { this.fuel = Math.min(FUEL_MAX, this.fuel + (amount || FUEL_PICKUP_AMOUNT)); this.flareTimer = this.flareDuration; }
+  isOnFire() { return this.fireState === FIRE_STATE.ON_FIRE; }
+  isLayingDown() { return this.fireState === FIRE_STATE.LAYING_DOWN; }
 
   getFlameIntensity() {
     if (!this.isOnFire()) return 0;
@@ -110,180 +79,174 @@ export class Player extends Entity {
   }
 
   update(dt, input, collisionSystem) {
-    // Animation
     this.animTimer += dt;
     this.breatheTimer += dt;
-    if (this.animTimer > 0.15) {
-      this.animTimer -= 0.15;
-      this.animFrame = (this.animFrame + 1) % 4;
-    }
+    if (this.animTimer > 0.15) { this.animTimer -= 0.15; this.animFrame = (this.animFrame + 1) % 4; }
+    if (this.flareTimer > 0) this.flareTimer -= dt;
+    if (this.fireState === FIRE_STATE.LAYING_DOWN) this.layDownTimer += dt;
 
-    // Flare timer
-    if (this.flareTimer > 0) {
-      this.flareTimer -= dt;
-    }
-
-    // Lay down timer
-    if (this.fireState === FIRE_STATE.LAYING_DOWN) {
-      this.layDownTimer += dt;
-    }
-
-    // Movement
     this.isMoving = false;
     if (!this.inputLocked && input) {
       this.dirX = input.direction.x;
       this.dirY = input.direction.y;
-
       if (this.dirX !== 0 || this.dirY !== 0) {
         const n = normalize(this.dirX, this.dirY);
-        const newX = this.x + n.x * this.speed * dt;
-        const newY = this.y + n.y * this.speed * dt;
-
-        const resolved = collisionSystem.resolveEntityTile(this, newX, newY);
+        const resolved = collisionSystem.resolveEntityTile(this, this.x + n.x * this.speed * dt, this.y + n.y * this.speed * dt);
         this.x = resolved.x;
         this.y = resolved.y;
-
         this.facingX = n.x;
         this.facingY = n.y;
         this.isMoving = true;
       }
     }
 
-    // Fire depletion - burns 2x faster when standing still
     if (this.fireState === FIRE_STATE.ON_FIRE) {
       this.secondsOnFire += dt;
       this.totalTime += dt;
-
       const stillnessPenalty = this.isMoving ? 0.7 : 2.0;
       const multiplier = this.drainMultiplier * stillnessPenalty;
       this.gel -= this.gelRate * multiplier * dt;
       this.fuel -= this.fuelRate * multiplier * dt;
-
       this.gel = Math.max(0, this.gel);
       this.fuel = Math.max(0, this.fuel);
-
-      // Reset drain multiplier each frame (set by proximity checks)
       this.drainMultiplier = 1.0;
-
-      // Combo
       this.comboTimer += dt;
-      if (this.comboTimer >= 3.0) {
-        this.comboMultiplier = Math.min(3.0, this.comboMultiplier + 0.1);
-        this.comboTimer = 0;
-      }
+      if (this.comboTimer >= 3.0) { this.comboMultiplier = Math.min(3.0, this.comboMultiplier + 0.1); this.comboTimer = 0; }
     }
   }
 
-  resetCombo() {
-    this.comboMultiplier = 1.0;
-    this.comboTimer = 0;
-  }
+  resetCombo() { this.comboMultiplier = 1.0; this.comboTimer = 0; }
 
   render(ctx, camera) {
     const screen = camera.worldToScreen(this.x, this.y);
     const sx = Math.floor(screen.x);
     const sy = Math.floor(screen.y);
-
-    if (this.fireState === FIRE_STATE.LAYING_DOWN) {
-      this._renderLayingDown(ctx, sx, sy);
-      return;
-    }
-
+    if (this.fireState === FIRE_STATE.LAYING_DOWN) { this._renderLayingDown(ctx, sx, sy); return; }
     this._renderStanding(ctx, sx, sy);
   }
 
   _renderLayingDown(ctx, sx, sy) {
     ctx.save();
-    // Prone body
-    const grad = ctx.createLinearGradient(sx, sy + 4, sx + this.width, sy + 12);
-    grad.addColorStop(0, this.costumeColor1);
-    grad.addColorStop(1, this._darkenColor(this.costumeColor1, 0.7));
+    const grad = ctx.createLinearGradient(sx, sy + 12, sx + 42, sy + 36);
+    grad.addColorStop(0, '#3a3a4a');
+    grad.addColorStop(1, '#2a2a3a');
     ctx.fillStyle = grad;
-    this._roundRect(ctx, sx, sy + 4, this.width, 8, 2);
-
-    // Head on ground
-    ctx.fillStyle = '#f0c896';
-    this._roundRect(ctx, sx + 2, sy + 5, 5, 5, 2);
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    this._roundRect(ctx, sx, sy + 12, 42, 24, 6);
+    ctx.fillStyle = '#4a4a5a';
+    this._roundRect(ctx, sx + 2, sy + 14, 16, 14, 5);
+    ctx.fillStyle = '#2299aa';
+    this._roundRect(ctx, sx + 5, sy + 18, 10, 5, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(sx + 7, sy + 13, 7, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 21, sy + 39, 20, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   _renderStanding(ctx, sx, sy) {
     ctx.save();
-    const breathe = Math.sin(this.breatheTimer * 2) * 0.5;
+    const b = Math.sin(this.breatheTimer * 2) * 1.5;
 
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(sx + 7, sy + 14, 5, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 21, sy + 42, 15, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Legs with walk animation
-    ctx.fillStyle = this._darkenColor(this.costumeColor1, 0.6);
-    if (this.isMoving) {
-      const legSwing = Math.sin(this.animTimer * 40) * 2;
-      this._roundRect(ctx, sx + 3, sy + 11 + legSwing * 0.3, 3, 3, 1);
-      this._roundRect(ctx, sx + 8, sy + 11 - legSwing * 0.3, 3, 3, 1);
-    } else {
-      this._roundRect(ctx, sx + 3, sy + 11, 3, 3, 1);
-      this._roundRect(ctx, sx + 8, sy + 11, 3, 3, 1);
-    }
+    // Boots
+    const ls = this.isMoving ? Math.sin(this.animTimer * 40) * 5 : 0;
+    ctx.fillStyle = '#1a1a2a';
+    this._roundRect(ctx, sx + 7, sy + 34 + ls * 0.3, 11, 8, 3);
+    this._roundRect(ctx, sx + 24, sy + 34 - ls * 0.3, 11, 8, 3);
 
-    // Body with gradient
-    const bodyGrad = ctx.createLinearGradient(sx + 2, sy + 4, sx + 12, sy + 12);
-    bodyGrad.addColorStop(0, this.costumeColor1);
-    bodyGrad.addColorStop(1, this._darkenColor(this.costumeColor1, 0.75));
-    ctx.fillStyle = bodyGrad;
-    this._roundRect(ctx, sx + 2, sy + 4 + breathe, 10, 8, 2);
+    // Legs - armored plating
+    const legG = ctx.createLinearGradient(sx + 8, sy + 26, sx + 34, sy + 36);
+    legG.addColorStop(0, '#3a3a4a');
+    legG.addColorStop(1, '#2a2a3a');
+    ctx.fillStyle = legG;
+    this._roundRect(ctx, sx + 9, sy + 26 + ls * 0.3, 9, 11, 3);
+    this._roundRect(ctx, sx + 24, sy + 26 - ls * 0.3, 9, 11, 3);
 
-    // Costume accent stripe
-    ctx.fillStyle = this.costumeAccent;
-    ctx.globalAlpha = 0.6;
-    ctx.fillRect(sx + 3, sy + 5 + breathe, 8, 1);
+    // Torso - power suit
+    const bodyG = ctx.createLinearGradient(sx + 5, sy + 10, sx + 37, sy + 28);
+    bodyG.addColorStop(0, '#444455');
+    bodyG.addColorStop(0.4, '#555566');
+    bodyG.addColorStop(1, '#2a2a3a');
+    ctx.fillStyle = bodyG;
+    this._roundRect(ctx, sx + 5, sy + 10 + b, 32, 18, 5);
+
+    // Chest plate
+    const cpG = ctx.createLinearGradient(sx + 10, sy + 12, sx + 32, sy + 24);
+    cpG.addColorStop(0, '#555566');
+    cpG.addColorStop(1, '#444455');
+    ctx.fillStyle = cpG;
+    this._roundRect(ctx, sx + 10, sy + 12 + b, 22, 12, 3);
+
+    // Orange accent stripes
+    ctx.fillStyle = '#cc6600';
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(sx + 8, sy + 14 + b, 26, 2);
+    ctx.fillRect(sx + 8, sy + 22 + b, 26, 2);
     ctx.globalAlpha = 1;
 
+    // Shoulder pads
+    ctx.fillStyle = '#4a4a5a';
+    this._roundRect(ctx, sx + 1, sy + 10 + b, 8, 11, 4);
+    this._roundRect(ctx, sx + 33, sy + 10 + b, 8, 11, 4);
+
     // Arms
-    ctx.fillStyle = this.costumeColor1;
-    if (this.isMoving) {
-      const armSwing = Math.sin(this.animTimer * 40) * 1.5;
-      ctx.fillRect(sx + 1, sy + 5 + breathe - armSwing * 0.3, 2, 5);
-      ctx.fillRect(sx + 11, sy + 5 + breathe + armSwing * 0.3, 2, 5);
+    const as = this.isMoving ? Math.sin(this.animTimer * 40) * 4 : 0;
+    ctx.fillStyle = '#3a3a4a';
+    ctx.fillRect(sx + 2, sy + 15 + b - as * 0.3, 5, 13);
+    ctx.fillRect(sx + 35, sy + 15 + b + as * 0.3, 5, 13);
+    ctx.fillStyle = '#1a1a2a';
+    this._roundRect(ctx, sx + 2, sy + 26 + b, 5, 3, 1);
+    this._roundRect(ctx, sx + 35, sy + 26 + b, 5, 3, 1);
+
+    // Neck
+    ctx.fillStyle = '#333344';
+    ctx.fillRect(sx + 16, sy + 6 + b, 10, 6);
+
+    // Helmet
+    const hG = ctx.createRadialGradient(sx + 21, sy + 2, 2, sx + 21, sy + 4, 14);
+    hG.addColorStop(0, '#5a5a6a');
+    hG.addColorStop(0.6, '#3e3e4e');
+    hG.addColorStop(1, '#2a2a3a');
+    ctx.fillStyle = hG;
+    this._roundRect(ctx, sx + 9, sy - 6, 24, 17, 7);
+
+    // Visor
+    const vG = ctx.createLinearGradient(sx + 12, sy - 1, sx + 30, sy + 8);
+    vG.addColorStop(0, '#115566');
+    vG.addColorStop(0.3, '#2299aa');
+    vG.addColorStop(0.5, '#33bbcc');
+    vG.addColorStop(0.7, '#2299aa');
+    vG.addColorStop(1, '#115566');
+    ctx.fillStyle = vG;
+    if (this.facingY > 0.3) {
+      this._roundRect(ctx, sx + 12, sy + 1, 18, 7, 3);
+      ctx.fillStyle = 'rgba(150,255,255,0.3)';
+      this._roundRect(ctx, sx + 14, sy + 2, 8, 3, 1);
+    } else if (this.facingY < -0.3) {
+      ctx.fillStyle = '#3a3a4a';
+      this._roundRect(ctx, sx + 12, sy - 1, 18, 5, 3);
     } else {
-      ctx.fillRect(sx + 1, sy + 5 + breathe, 2, 5);
-      ctx.fillRect(sx + 11, sy + 5 + breathe, 2, 5);
+      const vx = this.facingX < 0 ? sx + 10 : sx + 16;
+      this._roundRect(ctx, vx, sy, 15, 7, 3);
+      ctx.fillStyle = 'rgba(150,255,255,0.3)';
+      this._roundRect(ctx, vx + 2, sy + 1, 6, 3, 1);
     }
 
-    // Head with skin gradient
-    const headGrad = ctx.createRadialGradient(sx + 7, sy + 2, 0, sx + 7, sy + 2, 4);
-    headGrad.addColorStop(0, '#f5d4a8');
-    headGrad.addColorStop(1, '#e0b888');
-    ctx.fillStyle = headGrad;
-    this._roundRect(ctx, sx + 4, sy - 1, 6, 6, 2);
-
-    // Eyes
-    ctx.fillStyle = '#222';
-    if (this.facingY < -0.3) {
-      ctx.fillRect(sx + 5, sy, 1, 2);
-      ctx.fillRect(sx + 8, sy, 1, 2);
-    } else if (this.facingY > 0.3) {
-      ctx.fillRect(sx + 5, sy + 3, 1, 2);
-      ctx.fillRect(sx + 8, sy + 3, 1, 2);
-    } else if (this.facingX < 0) {
-      ctx.fillRect(sx + 4, sy + 1, 1, 2);
-      ctx.fillRect(sx + 4, sy + 3, 1, 1);
-    } else {
-      ctx.fillRect(sx + 9, sy + 1, 1, 2);
-      ctx.fillRect(sx + 9, sy + 3, 1, 1);
-    }
-
-    // Hair
-    ctx.fillStyle = '#553311';
-    ctx.fillRect(sx + 4, sy - 2, 6, 2);
+    // Helmet light
+    const pulse = this.isOnFire() ? Math.sin(this.breatheTimer * 4) * 0.3 + 0.7 : 0.3;
+    ctx.fillStyle = `rgba(255,120,0,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(sx + 21, sy - 4, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(255,120,0,${pulse * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(sx + 21, sy - 4, 5, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
   }

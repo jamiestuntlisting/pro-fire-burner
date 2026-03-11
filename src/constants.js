@@ -1,5 +1,5 @@
-export const TILE_SIZE = 16;
-export const PLAYER_SPEED = 120;
+export const TILE_SIZE = 48;
+export const PLAYER_SPEED = 360;
 export const VIEWPORT_WIDTH = 480;
 export const VIEWPORT_HEIGHT = 270;
 export const GEL_DEPLETION_BASE = 4.5;

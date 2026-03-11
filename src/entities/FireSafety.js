@@ -13,8 +13,8 @@ const SAFETY_STATE = {
 export class FireSafety extends Entity {
   constructor(x, y, facingAngle) {
     super(x, y);
-    this.width = 18;
-    this.height = 18;
+    this.width = 54;
+    this.height = 54;
 
     // Facing direction (angle in radians)
     this.facingAngle = facingAngle || 0;
@@ -212,13 +212,13 @@ export class FireSafety extends Entity {
         const angleJitter = (Math.random() - 0.5) * 0.5;
         const angle = this.facingAngle + angleJitter;
         this.sprayParticles.push({
-          x: cx + this.dirX * 10,
-          y: cy + this.dirY * 10,
+          x: cx + this.dirX * 30,
+          y: cy + this.dirY * 30,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 0.35 + Math.random() * 0.25,
           maxLife: 0.6,
-          size: 1.5 + Math.random() * 1.5,
+          size: 4.5 + Math.random() * 4.5,
         });
       }
       if (this.sprayParticles.length > 100) {
@@ -241,123 +241,180 @@ export class FireSafety extends Entity {
     }
 
     ctx.save();
-    const breathe = Math.sin(this.breatheTimer * 2) * 0.3;
+    const breathe = Math.sin(this.breatheTimer * 2) * 0.9;
     const isWalking = this.aiState === SAFETY_STATE.FOLLOWING || this.aiState === SAFETY_STATE.COOLDOWN;
-    const legSwing = isWalking ? Math.sin(this.walkTimer * 8) * 2 : 0;
+    const legSwing = isWalking ? Math.sin(this.walkTimer * 8) * 6 : 0;
 
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(sx + 9, sy + 18, 7, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 27, sy + 54, 21, 7.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Boots
-    ctx.fillStyle = '#222222';
-    this._roundRect(ctx, sx + 2, sy + 15 + legSwing * 0.2, 5, 3, 1);
-    this._roundRect(ctx, sx + 11, sy + 15 - legSwing * 0.2, 5, 3, 1);
-
-    // Legs in fire suit
-    const legGrad = ctx.createLinearGradient(sx + 3, sy + 11, sx + 15, sy + 16);
-    legGrad.addColorStop(0, '#a0a8b0');
-    legGrad.addColorStop(1, '#808890');
-    ctx.fillStyle = legGrad;
-    this._roundRect(ctx, sx + 3, sy + 11 + legSwing * 0.3, 4, 5, 1);
-    this._roundRect(ctx, sx + 11, sy + 11 - legSwing * 0.3, 4, 5, 1);
-
-    // Body - aluminized fire proximity suit
-    const suitGrad = ctx.createLinearGradient(sx + 1, sy + 3, sx + 17, sy + 13);
-    suitGrad.addColorStop(0, '#c8d0d8');
-    suitGrad.addColorStop(0.15, '#e0e4e8');
-    suitGrad.addColorStop(0.3, '#d0d8e0');
-    suitGrad.addColorStop(0.5, '#b8c0c8');
-    suitGrad.addColorStop(0.7, '#d0d8e0');
-    suitGrad.addColorStop(1, '#a0a8b0');
-    ctx.fillStyle = suitGrad;
-    this._roundRect(ctx, sx + 1, sy + 3 + breathe, 16, 10, 3);
-
-    // Reflective safety stripes
-    ctx.fillStyle = '#ccff00';
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(sx + 2, sy + 5 + breathe, 14, 1);
-    ctx.fillRect(sx + 2, sy + 9 + breathe, 14, 1);
-    ctx.globalAlpha = 1;
-
-    // Shoulder pads
-    ctx.fillStyle = '#b0b8c0';
-    this._roundRect(ctx, sx - 1, sy + 3 + breathe, 4, 4, 2);
-    this._roundRect(ctx, sx + 15, sy + 3 + breathe, 4, 4, 2);
-
-    // Arms
-    const armColor = '#a8b0b8';
-    ctx.fillStyle = armColor;
-    ctx.fillRect(sx - 1, sy + 5 + breathe, 3, 6);
-    ctx.fillRect(sx + 16, sy + 5 + breathe, 3, 6);
-    ctx.fillStyle = '#333333';
-    this._roundRect(ctx, sx - 1, sy + 10 + breathe, 3, 2, 1);
-    this._roundRect(ctx, sx + 16, sy + 10 + breathe, 3, 2, 1);
-
-    // Fire extinguisher
-    const extOffX = sx + 9 + this.dirX * 8;
-    const extOffY = sy + 5 + breathe + this.dirY * 5;
-
-    const extGrad = ctx.createLinearGradient(extOffX - 3, extOffY - 2, extOffX + 3, extOffY + 8);
-    extGrad.addColorStop(0, '#ee2200');
-    extGrad.addColorStop(0.3, '#ff4422');
-    extGrad.addColorStop(0.5, '#dd1100');
-    extGrad.addColorStop(1, '#aa0000');
-    ctx.fillStyle = extGrad;
-    this._roundRect(ctx, extOffX - 3, extOffY - 2, 6, 10, 2);
-
+    // Boots — heavy armored treads
     ctx.fillStyle = '#111111';
-    this._roundRect(ctx, extOffX - 2, extOffY - 4, 4, 3, 1);
+    this._roundRect(ctx, sx + 6, sy + 45 + legSwing * 0.2, 15, 9, 3);
+    this._roundRect(ctx, sx + 33, sy + 45 - legSwing * 0.2, 15, 9, 3);
+    // Boot sole detail
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(sx + 7, sy + 51 + legSwing * 0.2, 13, 2);
+    ctx.fillRect(sx + 34, sy + 51 - legSwing * 0.2, 13, 2);
 
+    // Legs — heavy industrial suit pants
+    const legGrad = ctx.createLinearGradient(sx + 9, sy + 33, sx + 45, sy + 48);
+    legGrad.addColorStop(0, '#3a3e44');
+    legGrad.addColorStop(0.5, '#2e3238');
+    legGrad.addColorStop(1, '#24282e');
+    ctx.fillStyle = legGrad;
+    this._roundRect(ctx, sx + 9, sy + 33 + legSwing * 0.3, 12, 15, 3);
+    this._roundRect(ctx, sx + 33, sy + 33 - legSwing * 0.3, 12, 15, 3);
+    // Knee armor plates
+    ctx.fillStyle = '#1a1e22';
+    this._roundRect(ctx, sx + 10, sy + 36 + legSwing * 0.3, 10, 6, 2);
+    this._roundRect(ctx, sx + 34, sy + 36 - legSwing * 0.3, 10, 6, 2);
+
+    // Body — heavy industrial mech/hazmat suit
+    const suitGrad = ctx.createLinearGradient(sx + 3, sy + 9, sx + 51, sy + 39);
+    suitGrad.addColorStop(0, '#44484e');
+    suitGrad.addColorStop(0.15, '#3a3e44');
+    suitGrad.addColorStop(0.3, '#32363c');
+    suitGrad.addColorStop(0.5, '#2a2e34');
+    suitGrad.addColorStop(0.7, '#32363c');
+    suitGrad.addColorStop(1, '#282c30');
+    ctx.fillStyle = suitGrad;
+    this._roundRect(ctx, sx + 3, sy + 9 + breathe, 48, 30, 9);
+
+    // Chest armor plate overlay
+    ctx.fillStyle = 'rgba(20,22,26,0.5)';
+    this._roundRect(ctx, sx + 12, sy + 12 + breathe, 30, 18, 5);
+
+    // Hazard stripes — orange/black industrial
+    ctx.fillStyle = '#cc6600';
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(sx + 6, sy + 15 + breathe, 42, 3);
+    ctx.fillRect(sx + 6, sy + 27 + breathe, 42, 3);
+    ctx.globalAlpha = 1;
+    // Stripe hash marks
+    ctx.fillStyle = '#1a1a1a';
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(sx + 8 + i * 6, sy + 15 + breathe, 2, 3);
+      ctx.fillRect(sx + 8 + i * 6, sy + 27 + breathe, 2, 3);
+    }
+
+    // Shoulder pads — heavy armored pauldrons
+    const shoulderGrad = ctx.createLinearGradient(sx - 3, sy + 9, sx + 12, sy + 21);
+    shoulderGrad.addColorStop(0, '#3a3e44');
+    shoulderGrad.addColorStop(1, '#22262a');
+    ctx.fillStyle = shoulderGrad;
+    this._roundRect(ctx, sx - 3, sy + 9 + breathe, 12, 12, 6);
+    this._roundRect(ctx, sx + 45, sy + 9 + breathe, 12, 12, 6);
+    // Pauldron edge highlights
+    ctx.fillStyle = '#555a60';
+    ctx.fillRect(sx - 2, sy + 10 + breathe, 10, 1);
+    ctx.fillRect(sx + 46, sy + 10 + breathe, 10, 1);
+
+    // Arms — armored sleeves
+    ctx.fillStyle = '#2e3238';
+    ctx.fillRect(sx - 3, sy + 15 + breathe, 9, 18);
+    ctx.fillRect(sx + 48, sy + 15 + breathe, 9, 18);
+    // Armored gauntlets
+    ctx.fillStyle = '#1a1e22';
+    this._roundRect(ctx, sx - 3, sy + 30 + breathe, 9, 6, 3);
+    this._roundRect(ctx, sx + 48, sy + 30 + breathe, 9, 6, 3);
+
+    // Backpack / life support unit
+    ctx.fillStyle = '#1e2226';
+    this._roundRect(ctx, sx + 15, sy + 10 + breathe, 24, 20, 4);
+    ctx.fillStyle = '#cc3300';
+    ctx.beginPath();
+    ctx.arc(sx + 27, sy + 16 + breathe, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Vent slats on backpack
+    ctx.fillStyle = '#0e1114';
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(sx + 18, sy + 22 + breathe + i * 3, 18, 1);
+    }
+
+    // Fire extinguisher — industrial suppression unit
+    const extOffX = sx + 27 + this.dirX * 24;
+    const extOffY = sy + 15 + breathe + this.dirY * 15;
+
+    const extGrad = ctx.createLinearGradient(extOffX - 9, extOffY - 6, extOffX + 9, extOffY + 24);
+    extGrad.addColorStop(0, '#881100');
+    extGrad.addColorStop(0.3, '#aa2211');
+    extGrad.addColorStop(0.5, '#771100');
+    extGrad.addColorStop(1, '#550000');
+    ctx.fillStyle = extGrad;
+    this._roundRect(ctx, extOffX - 9, extOffY - 6, 18, 30, 6);
+
+    // Extinguisher top mechanism
+    ctx.fillStyle = '#0a0a0a';
+    this._roundRect(ctx, extOffX - 6, extOffY - 12, 12, 9, 3);
+
+    // Pressure gauge
+    ctx.fillStyle = '#556655';
+    ctx.beginPath();
+    ctx.arc(extOffX, extOffY - 9, 4.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#88aa88';
     ctx.beginPath();
-    ctx.arc(extOffX, extOffY - 3, 1.5, 0, Math.PI * 2);
+    ctx.arc(extOffX, extOffY - 9, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hose
-    ctx.strokeStyle = '#222222';
-    ctx.lineWidth = 2;
+    // Hose — thick industrial
+    ctx.strokeStyle = '#111111';
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(extOffX, extOffY - 4);
+    ctx.moveTo(extOffX, extOffY - 12);
     ctx.quadraticCurveTo(
-      extOffX + this.dirX * 4, extOffY - 6 + this.dirY * 2,
-      extOffX + this.dirX * 10, extOffY - 2 + this.dirY * 8
+      extOffX + this.dirX * 12, extOffY - 18 + this.dirY * 6,
+      extOffX + this.dirX * 30, extOffY - 6 + this.dirY * 24
     );
     ctx.stroke();
 
-    const nozzleX = extOffX + this.dirX * 10;
-    const nozzleY = extOffY - 2 + this.dirY * 8;
+    const nozzleX = extOffX + this.dirX * 30;
+    const nozzleY = extOffY - 6 + this.dirY * 24;
+    ctx.fillStyle = '#2a2a2a';
+    this._roundRect(ctx, nozzleX - 3, nozzleY - 3, 9, 9, 3);
+    // Nozzle tip
     ctx.fillStyle = '#444444';
-    this._roundRect(ctx, nozzleX - 1, nozzleY - 1, 3, 3, 1);
+    this._roundRect(ctx, nozzleX - 1.5 + this.dirX * 4, nozzleY - 1.5 + this.dirY * 4, 6, 6, 2);
 
-    // Fire hood/helmet
-    const hoodGrad = ctx.createRadialGradient(sx + 9, sy + 0, 1, sx + 9, sy + 1, 8);
-    hoodGrad.addColorStop(0, '#d8dde2');
-    hoodGrad.addColorStop(0.5, '#c0c8d0');
-    hoodGrad.addColorStop(1, '#a0a8b0');
+    // Helmet — heavy industrial mech helmet
+    const hoodGrad = ctx.createRadialGradient(sx + 27, sy + 0, 3, sx + 27, sy + 3, 24);
+    hoodGrad.addColorStop(0, '#3a3e44');
+    hoodGrad.addColorStop(0.5, '#2a2e34');
+    hoodGrad.addColorStop(1, '#1a1e22');
     ctx.fillStyle = hoodGrad;
-    this._roundRect(ctx, sx + 3, sy - 3, 12, 8, 4);
+    this._roundRect(ctx, sx + 9, sy - 9, 36, 24, 12);
 
-    // Face shield
-    const visorGrad = ctx.createLinearGradient(sx + 4, sy, sx + 14, sy + 4);
-    visorGrad.addColorStop(0, '#2a3040');
-    visorGrad.addColorStop(0.3, '#3a4860');
-    visorGrad.addColorStop(0.5, '#4a5870');
-    visorGrad.addColorStop(0.7, '#3a4860');
-    visorGrad.addColorStop(1, '#2a3040');
+    // Helmet ridge / crest
+    ctx.fillStyle = '#22262a';
+    this._roundRect(ctx, sx + 18, sy - 12, 18, 6, 3);
+
+    // Face shield / visor — dark tinted
+    const visorGrad = ctx.createLinearGradient(sx + 12, sy, sx + 42, sy + 12);
+    visorGrad.addColorStop(0, '#0a1018');
+    visorGrad.addColorStop(0.3, '#142030');
+    visorGrad.addColorStop(0.5, '#1a2838');
+    visorGrad.addColorStop(0.7, '#142030');
+    visorGrad.addColorStop(1, '#0a1018');
     ctx.fillStyle = visorGrad;
-    this._roundRect(ctx, sx + 4, sy, 10, 4, 2);
+    this._roundRect(ctx, sx + 12, sy, 30, 12, 6);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    this._roundRect(ctx, sx + 5, sy, 4, 1, 0.5);
+    // Visor glint
+    ctx.fillStyle = 'rgba(120,160,200,0.2)';
+    this._roundRect(ctx, sx + 15, sy, 12, 3, 1.5);
+
+    // Helmet chin guard
+    ctx.fillStyle = '#1e2226';
+    this._roundRect(ctx, sx + 15, sy + 10, 24, 6, 3);
 
     // Spray glow when spraying
     if (this.aiState === SAFETY_STATE.SPRAYING) {
-      ctx.fillStyle = 'rgba(200,230,255,0.4)';
+      ctx.fillStyle = 'rgba(150,200,255,0.4)';
       ctx.beginPath();
-      ctx.arc(nozzleX + 1, nozzleY + 1, 4, 0, Math.PI * 2);
+      ctx.arc(nozzleX + 3, nozzleY + 3, 12, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -365,9 +422,9 @@ export class FireSafety extends Entity {
     if (this.aiState === SAFETY_STATE.AIMING) {
       const aimFlash = Math.sin(this.aimTimer * 6) > 0;
       if (aimFlash) {
-        ctx.fillStyle = 'rgba(255,100,100,0.5)';
+        ctx.fillStyle = 'rgba(255,60,60,0.6)';
         ctx.beginPath();
-        ctx.arc(nozzleX + this.dirX * 3, nozzleY + this.dirY * 3, 2, 0, Math.PI * 2);
+        ctx.arc(nozzleX + this.dirX * 9, nozzleY + this.dirY * 9, 6, 0, Math.PI * 2);
         ctx.fill();
       }
     }

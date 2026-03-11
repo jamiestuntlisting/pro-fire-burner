@@ -40,13 +40,13 @@ export class TrailRenderer {
     while (this.emitTimer >= emitRate) {
       this.emitTimer -= emitRate;
       const p = this.pool.acquire();
-      p.x = playerX + randomRange(0, 14);
-      p.y = playerY + randomRange(8, 16);
-      p.vx = randomRange(-5, 5);
-      p.vy = randomRange(-12, -4);
+      p.x = playerX + randomRange(0, 42);
+      p.y = playerY + randomRange(24, 48);
+      p.vx = randomRange(-15, 15);
+      p.vy = randomRange(-36, -12);
       p.life = FIRE_TRAIL_LIFETIME * randomRange(0.5, 1.0);
       p.maxLife = p.life;
-      p.size = Math.ceil(randomRange(2, 4));
+      p.size = Math.ceil(randomRange(6, 12));
 
       const colorT = Math.random();
       if (colorT < 0.3) {
@@ -73,14 +73,12 @@ export class TrailRenderer {
       const alpha = Math.max(0, lifeRatio * 0.6);
       const sz = p.size * (0.3 + lifeRatio * 0.7);
 
-      // Glow
       ctx.globalAlpha = alpha * 0.3;
       ctx.fillStyle = `rgb(${p.r},${Math.min(255, p.g + 30)},${p.b})`;
       ctx.beginPath();
       ctx.arc(Math.floor(screen.x), Math.floor(screen.y), sz * 1.3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Core
       ctx.globalAlpha = alpha;
       ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
       ctx.beginPath();
