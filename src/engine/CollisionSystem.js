@@ -62,18 +62,22 @@ export class CollisionSystem {
     return false;
   }
 
-  // Check if entity's feet are in water
+  // Check if entity's lower body is in water
   isOnWater(entity) {
     if (!this.tileMap) return false;
-    // Use feet position (bottom center of entity)
-    const fx = entity.x + entity.width / 2;
-    const fy = entity.y + entity.height - 4; // bottom of sprite, slight margin
-    // Check both feet positions for wider entities
-    const leftFoot = entity.x + entity.width * 0.25;
-    const rightFoot = entity.x + entity.width * 0.75;
-    return this.tileMap.isWater(fx, fy) ||
-           this.tileMap.isWater(leftFoot, fy) ||
-           this.tileMap.isWater(rightFoot, fy);
+    const cx = entity.x + entity.width / 2;
+    const left = entity.x + 2;
+    const right = entity.x + entity.width - 2;
+    // Check multiple Y positions from knees to feet
+    const knees = entity.y + entity.height * 0.6;
+    const shins = entity.y + entity.height * 0.75;
+    const feet = entity.y + entity.height - 2;
+    for (const py of [knees, shins, feet]) {
+      for (const px of [left, cx, right]) {
+        if (this.tileMap.isWater(px, py)) return true;
+      }
+    }
+    return false;
   }
 
   // Query nearby entities of a specific type
