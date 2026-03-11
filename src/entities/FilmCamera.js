@@ -14,7 +14,7 @@ export class FilmCamera extends Entity {
     this.panMax = x + (config && config.panRange ? config.panRange : 100);
 
     this.fovAngle = ((config && config.cameraFOV) || 70) * (Math.PI / 180);
-    this.fovRange = TILE_SIZE * 15;
+    this.fovRange = TILE_SIZE * 30;
     this.facingAngle = Math.PI / 2;
 
     this.playerInFOV = true;

@@ -32,7 +32,8 @@ export class TileMap {
   }
 
   isSolid(x, y) {
-    return this.getTileAtWorld(x, y) === TILE_WALL;
+    const tile = this.getTileAtWorld(x, y);
+    return tile === TILE_WALL || tile >= 3; // walls and props are solid
   }
 
   isWater(x, y) {
@@ -41,12 +42,12 @@ export class TileMap {
 
   isWalkable(x, y) {
     const tile = this.getTileAtWorld(x, y);
-    return tile !== TILE_WALL;
+    return tile === TILE_FLOOR || tile === TILE_WATER;
   }
 
   isWalkableTile(col, row) {
     const tile = this.getTile(col, row);
-    return tile !== TILE_WALL;
+    return tile === TILE_FLOOR || tile === TILE_WATER;
   }
 
   render(ctx, camera) {

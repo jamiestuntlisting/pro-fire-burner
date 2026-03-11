@@ -13,11 +13,18 @@ export class InputManager {
     this._prevEnter = false;
     this.isTouchDevice = false;
 
+    // Touch tap for menu/enter
+    this._touchTap = false;
+
     // Joystick state
     this.joystickActive = false;
     this.joystickStart = { x: 0, y: 0 };
     this.joystickCurrent = { x: 0, y: 0 };
     this.joystickDir = { x: 0, y: 0 };
+
+    // Mobile name input
+    this._mobileNameInput = document.getElementById('mobile-name-input');
+    this._mobileNameCallback = null;
 
     this._canvas = canvas;
 
@@ -38,24 +45,28 @@ export class InputManager {
     const joystickZone = document.getElementById('joystick-zone');
     const joystickKnob = document.getElementById('joystick-knob');
     const actionBtn = document.getElementById('action-btn');
-    const enterBtn = document.getElementById('enter-btn');
     const touchControls = document.getElementById('touch-controls');
     if (!joystickZone || !actionBtn) return;
 
-    // Auto-detect touch device
-    const showTouch = () => {
-      if (!this.isTouchDevice) {
-        this.isTouchDevice = true;
-        if (touchControls) touchControls.style.display = 'block';
-      }
-    };
+    this._touchControls = touchControls;
 
-    // Also detect on first touch anywhere
-    window.addEventListener('touchstart', () => showTouch(), { once: true });
+    // Auto-detect touch device on first touch anywhere
+    window.addEventListener('touchstart', () => {
+      this.isTouchDevice = true;
+    }, { once: true });
+
+    // Tap on canvas fires enter (for menus, call sheets, etc.)
+    const canvasEl = this._canvas.canvas || this._canvas;
+    canvasEl.addEventListener('touchstart', (e) => {
+      this.isTouchDevice = true;
+      this._touchTap = true;
+    });
+    canvasEl.addEventListener('touchend', () => {
+      // _touchTap is consumed in update()
+    });
 
     joystickZone.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      showTouch();
       const touch = e.touches[0];
       const rect = joystickZone.getBoundingClientRect();
       this.joystickActive = true;
@@ -68,7 +79,6 @@ export class InputManager {
       if (!this.joystickActive) return;
       const touch = e.touches[0];
       this.joystickCurrent = { x: touch.clientX, y: touch.clientY };
-      // Move knob visually
       if (joystickKnob) {
         const dx = touch.clientX - this.joystickStart.x;
         const dy = touch.clientY - this.joystickStart.y;
@@ -100,19 +110,48 @@ export class InputManager {
       e.preventDefault();
       this.actionPressed = false;
     });
+  }
 
-    if (enterBtn) {
-      enterBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.enterPressed = true;
-        this.keys['Enter'] = true;
-      });
-      enterBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        this.enterPressed = false;
-        this.keys['Enter'] = false;
-      });
+  // Show/hide game controls (joystick + action button)
+  setGameControlsVisible(visible) {
+    if (this._touchControls) {
+      this._touchControls.style.display = visible && this.isTouchDevice ? 'block' : 'none';
     }
+  }
+
+  // Focus the hidden text input to bring up mobile keyboard for name entry
+  startMobileNameEntry(callback) {
+    if (!this.isTouchDevice || !this._mobileNameInput) return;
+    this._mobileNameInput.value = '';
+    this._mobileNameInput.style.top = '50%';
+    this._mobileNameInput.style.left = '50%';
+    this._mobileNameInput.style.opacity = '0';
+    this._mobileNameInput.focus();
+    this._mobileNameCallback = callback;
+
+    this._mobileNameInput.addEventListener('input', () => {
+      const val = this._mobileNameInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10);
+      this._mobileNameInput.value = val;
+      if (this._mobileNameCallback) {
+        this._mobileNameCallback(val);
+      }
+    });
+  }
+
+  endMobileNameEntry() {
+    if (this._mobileNameInput) {
+      this._mobileNameInput.blur();
+      this._mobileNameInput.style.top = '-100px';
+      this._mobileNameInput.style.left = '-100px';
+      this._mobileNameCallback = null;
+    }
+  }
+
+  getMobileNameValue() {
+    if (this._mobileNameInput) {
+      return this._mobileNameInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10);
+    }
+    return '';
   }
 
   update() {
@@ -150,10 +189,12 @@ export class InputManager {
     this.actionJustPressed = currentAction && !this._prevAction;
     this._prevAction = currentAction;
 
-    // Enter key
-    const currentEnter = this.keys['Enter'] || this.keys['NumpadEnter'];
+    // Enter key OR touch tap
+    const currentEnter = this.keys['Enter'] || this.keys['NumpadEnter'] || this._touchTap;
     this.enterJustPressed = currentEnter && !this._prevEnter;
     this._prevEnter = currentEnter;
+    // Consume tap after one frame
+    this._touchTap = false;
   }
 
   isActionDown() {

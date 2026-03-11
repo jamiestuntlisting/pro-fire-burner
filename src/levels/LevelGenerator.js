@@ -1,4 +1,4 @@
-import { TILE_SIZE, TILE_FLOOR, TILE_WALL, TILE_WATER } from '../constants.js';
+import { TILE_SIZE, TILE_FLOOR, TILE_WALL, TILE_WATER, TILE_PROP1, TILE_PROP2, TILE_PROP3 } from '../constants.js';
 import { randomInt, randomRange } from '../utils/math.js';
 
 export class LevelGenerator {
@@ -59,6 +59,17 @@ export class LevelGenerator {
             data[row][col] = TILE_WATER;
           }
         }
+      }
+    }
+
+    // Set obstacles / props scattered around the map
+    const propTypes = [TILE_PROP1, TILE_PROP2, TILE_PROP3];
+    const propCount = Math.floor((width * height) / 40);
+    for (let i = 0; i < propCount; i++) {
+      const px = randomInt(3, width - 4);
+      const py = randomInt(3, height - 4);
+      if (data[py][px] === TILE_FLOOR) {
+        data[py][px] = propTypes[randomInt(0, propTypes.length - 1)];
       }
     }
 

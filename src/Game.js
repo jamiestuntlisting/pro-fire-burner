@@ -294,13 +294,19 @@ export class Game {
   }
 
   _updateMenu(dt) {
+    this.input.setGameControlsVisible(false);
     const choice = this.mainMenu.update(dt, this.input);
     if (choice === 'NEW GAME') {
       this.levelManager.setLevel(0);
       this.playerName = '';
       this._nameEntryKeys = {};
       this._nameBackspaceHeld = false;
-      this.fadeToState(STATES.NAME_ENTRY, () => {});
+      this.fadeToState(STATES.NAME_ENTRY, () => {
+        // On mobile, focus the hidden input to bring up the keyboard
+        this.input.startMobileNameEntry((val) => {
+          this.playerName = val;
+        });
+      });
     } else if (choice === 'HIGH SCORES') {
       this.fadeToState(STATES.HIGH_SCORE, () => {
         this.highScoreBoard.refresh();
@@ -312,27 +318,36 @@ export class Game {
   }
 
   _updateNameEntry(dt) {
-    // Listen for key presses for name
-    for (const [code, pressed] of Object.entries(this.input.keys)) {
-      if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
-        const letter = code.replace('Key', '');
-        if (!this._nameEntryKeys[code]) {
-          this.playerName += letter;
-        }
-        this._nameEntryKeys[code] = true;
-      } else if (!pressed) {
-        this._nameEntryKeys[code] = false;
-      }
-    }
-    if (this.input.keys['Backspace']) {
-      if (!this._nameBackspaceHeld) {
-        this.playerName = this.playerName.slice(0, -1);
-        this._nameBackspaceHeld = true;
-      }
+    this.input.setGameControlsVisible(false);
+
+    // On mobile, sync from hidden input
+    if (this.input.isTouchDevice) {
+      this.playerName = this.input.getMobileNameValue();
     } else {
-      this._nameBackspaceHeld = false;
+      // Listen for key presses for name (keyboard)
+      for (const [code, pressed] of Object.entries(this.input.keys)) {
+        if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
+          const letter = code.replace('Key', '');
+          if (!this._nameEntryKeys[code]) {
+            this.playerName += letter;
+          }
+          this._nameEntryKeys[code] = true;
+        } else if (!pressed) {
+          this._nameEntryKeys[code] = false;
+        }
+      }
+      if (this.input.keys['Backspace']) {
+        if (!this._nameBackspaceHeld) {
+          this.playerName = this.playerName.slice(0, -1);
+          this._nameBackspaceHeld = true;
+        }
+      } else {
+        this._nameBackspaceHeld = false;
+      }
     }
+
     if (this.input.enterJustPressed && this.playerName.length > 0) {
+      this.input.endMobileNameEntry();
       this.fadeToState(STATES.CALL_SHEET, () => {
         this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
       });
@@ -358,8 +373,10 @@ export class Game {
   }
 
   _updateCountdown(dt) {
+    this.input.setGameControlsVisible(false);
     if (this.countdown.update(dt)) {
       this.state = STATES.PLAYING;
+      this.input.setGameControlsVisible(true);
       this.player.ignite();
       if (this.levelTimer) this.levelTimer.start();
       if (this.cameraCar) this.cameraCar.activate();
@@ -593,6 +610,7 @@ export class Game {
   }
 
   _updateEndAnimation(dt) {
+    this.input.setGameControlsVisible(false);
     this.endAnimTimer += dt;
 
     // Keep updating rendering during end animation
@@ -872,8 +890,13 @@ export class Game {
       if (blink) {
         ctx.fillStyle = '#44ff44';
         ctx.font = '14px monospace';
-        ctx.fillText('PRESS ENTER TO START', cx, 310);
+        const hintText = this.input.isTouchDevice ? 'TAP HERE TO START' : 'PRESS ENTER TO START';
+        ctx.fillText(hintText, cx, 310);
       }
+    } else if (this.input.isTouchDevice) {
+      ctx.fillStyle = '#aa7744';
+      ctx.font = '14px monospace';
+      ctx.fillText('TYPE YOUR NAME USING THE KEYBOARD BELOW', cx, 310);
     }
 
     ctx.textAlign = 'left';
