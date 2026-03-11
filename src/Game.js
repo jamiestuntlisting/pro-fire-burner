@@ -320,30 +320,38 @@ export class Game {
   _updateNameEntry(dt) {
     this.input.setGameControlsVisible(false);
 
-    // On mobile, sync from hidden input
-    if (this.input.isTouchDevice) {
-      this.playerName = this.input.getMobileNameValue();
-    } else {
-      // Listen for key presses for name (keyboard)
-      for (const [code, pressed] of Object.entries(this.input.keys)) {
-        if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
-          const letter = code.replace('Key', '');
-          if (!this._nameEntryKeys[code]) {
-            this.playerName += letter;
+    // Sync name from mobile input if active
+    const mobileVal = this.input.getMobileNameValue();
+    if (mobileVal.length > 0) {
+      this.playerName = mobileVal;
+    }
+
+    // Also listen for key presses for name (physical keyboard)
+    for (const [code, pressed] of Object.entries(this.input.keys)) {
+      if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
+        const letter = code.replace('Key', '');
+        if (!this._nameEntryKeys[code]) {
+          this.playerName += letter;
+          // Sync back to mobile input
+          if (this.input._mobileNameInput) {
+            this.input._mobileNameInput.value = this.playerName;
           }
-          this._nameEntryKeys[code] = true;
-        } else if (!pressed) {
-          this._nameEntryKeys[code] = false;
+        }
+        this._nameEntryKeys[code] = true;
+      } else if (!pressed) {
+        this._nameEntryKeys[code] = false;
+      }
+    }
+    if (this.input.keys['Backspace']) {
+      if (!this._nameBackspaceHeld) {
+        this.playerName = this.playerName.slice(0, -1);
+        this._nameBackspaceHeld = true;
+        if (this.input._mobileNameInput) {
+          this.input._mobileNameInput.value = this.playerName;
         }
       }
-      if (this.input.keys['Backspace']) {
-        if (!this._nameBackspaceHeld) {
-          this.playerName = this.playerName.slice(0, -1);
-          this._nameBackspaceHeld = true;
-        }
-      } else {
-        this._nameBackspaceHeld = false;
-      }
+    } else {
+      this._nameBackspaceHeld = false;
     }
 
     if (this.input.enterJustPressed && this.playerName.length > 0) {
@@ -893,10 +901,10 @@ export class Game {
         const hintText = this.input.isTouchDevice ? 'TAP HERE TO START' : 'PRESS ENTER TO START';
         ctx.fillText(hintText, cx, 310);
       }
-    } else if (this.input.isTouchDevice) {
+    } else {
       ctx.fillStyle = '#aa7744';
       ctx.font = '14px monospace';
-      ctx.fillText('TYPE YOUR NAME USING THE KEYBOARD BELOW', cx, 310);
+      ctx.fillText('TAP THE INPUT BELOW TO TYPE YOUR NAME', cx, 310);
     }
 
     ctx.textAlign = 'left';

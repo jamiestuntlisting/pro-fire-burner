@@ -121,29 +121,68 @@ export class InputManager {
 
   // Focus the hidden text input to bring up mobile keyboard for name entry
   startMobileNameEntry(callback) {
-    if (!this.isTouchDevice || !this._mobileNameInput) return;
-    this._mobileNameInput.value = '';
-    this._mobileNameInput.style.top = '50%';
-    this._mobileNameInput.style.left = '50%';
-    this._mobileNameInput.style.opacity = '0';
-    this._mobileNameInput.focus();
+    if (!this._mobileNameInput) return;
     this._mobileNameCallback = callback;
+    this._mobileNameActive = true;
+    this._mobileNameInput.value = '';
+    // Make input visible enough for browser to allow keyboard
+    this._mobileNameInput.style.position = 'absolute';
+    this._mobileNameInput.style.bottom = '10px';
+    this._mobileNameInput.style.left = '50%';
+    this._mobileNameInput.style.top = 'auto';
+    this._mobileNameInput.style.transform = 'translateX(-50%)';
+    this._mobileNameInput.style.width = '280px';
+    this._mobileNameInput.style.height = '44px';
+    this._mobileNameInput.style.opacity = '1';
+    this._mobileNameInput.style.fontSize = '20px';
+    this._mobileNameInput.style.textAlign = 'center';
+    this._mobileNameInput.style.background = '#1a1a2a';
+    this._mobileNameInput.style.color = '#ffcc00';
+    this._mobileNameInput.style.border = '2px solid #ff6600';
+    this._mobileNameInput.style.borderRadius = '8px';
+    this._mobileNameInput.style.fontFamily = 'monospace';
+    this._mobileNameInput.style.zIndex = '200';
+    this._mobileNameInput.style.letterSpacing = '4px';
+    // Focus immediately - will work if triggered from user gesture
+    this._mobileNameInput.focus();
 
-    this._mobileNameInput.addEventListener('input', () => {
+    // Also focus on any tap (in case first focus didn't trigger keyboard)
+    this._mobileNameTapHandler = () => {
+      if (this._mobileNameActive) {
+        this._mobileNameInput.focus();
+      }
+    };
+    document.addEventListener('touchstart', this._mobileNameTapHandler);
+
+    // Remove old listener if any, add fresh one
+    this._mobileNameInputHandler = () => {
       const val = this._mobileNameInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10);
       this._mobileNameInput.value = val;
       if (this._mobileNameCallback) {
         this._mobileNameCallback(val);
       }
-    });
+    };
+    this._mobileNameInput.addEventListener('input', this._mobileNameInputHandler);
   }
 
   endMobileNameEntry() {
+    this._mobileNameActive = false;
     if (this._mobileNameInput) {
       this._mobileNameInput.blur();
+      this._mobileNameInput.style.position = 'absolute';
       this._mobileNameInput.style.top = '-100px';
       this._mobileNameInput.style.left = '-100px';
+      this._mobileNameInput.style.width = '1px';
+      this._mobileNameInput.style.height = '1px';
+      this._mobileNameInput.style.opacity = '0';
+      this._mobileNameInput.style.transform = '';
       this._mobileNameCallback = null;
+      if (this._mobileNameInputHandler) {
+        this._mobileNameInput.removeEventListener('input', this._mobileNameInputHandler);
+      }
+    }
+    if (this._mobileNameTapHandler) {
+      document.removeEventListener('touchstart', this._mobileNameTapHandler);
     }
   }
 
