@@ -73,7 +73,6 @@ export class TileMap {
   _renderTile(ctx, tile, sx, sy, col, row) {
     const t = this.theme;
     const S = TILE_SIZE;
-    // Pseudo-random based on tile position for consistent detail
     const hash = ((col * 7 + row * 13) * 2654435761) >>> 0;
     const r1 = (hash & 0xff) / 255;
     const r2 = ((hash >> 8) & 0xff) / 255;
@@ -91,11 +90,27 @@ export class TileMap {
 
         // Scuff marks / floor detail
         ctx.fillStyle = 'rgba(0,0,0,0.04)';
-        if (r1 > 0.7) {
-          ctx.fillRect(sx + r2 * 24, sy + r3 * 24, 12, 1);
+        if (r1 > 0.7) ctx.fillRect(sx + r2 * 24, sy + r3 * 24, 12, 1);
+        if (r2 > 0.8) ctx.fillRect(sx + r3 * 20, sy + r1 * 30, 1, 10);
+
+        // Tape marks on floor (film set gaffer tape)
+        if (r1 > 0.92) {
+          ctx.fillStyle = 'rgba(200,200,50,0.12)';
+          ctx.fillRect(sx + 2, sy + r2 * 30, S - 4, 3);
         }
-        if (r2 > 0.8) {
-          ctx.fillRect(sx + r3 * 20, sy + r1 * 30, 1, 10);
+        if (r2 > 0.95) {
+          ctx.fillStyle = 'rgba(200,50,50,0.1)';
+          ctx.fillRect(sx + r1 * 20, sy + 2, 3, S - 4);
+        }
+
+        // Cable runs on floor
+        if (r3 > 0.88 && r1 < 0.5) {
+          ctx.strokeStyle = 'rgba(30,30,30,0.15)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy + r2 * S);
+          ctx.bezierCurveTo(sx + S * 0.3, sy + r2 * S + 5, sx + S * 0.7, sy + r2 * S - 5, sx + S, sy + r3 * S);
+          ctx.stroke();
         }
 
         // Tile grout lines
@@ -113,13 +128,10 @@ export class TileMap {
         const brickW = 24;
         for (let by = 0; by < S; by += brickH) {
           const offsetX = (row + Math.floor(by / brickH)) % 2 === 0 ? 0 : brickW / 2;
-          // Mortar horizontal line
           ctx.fillStyle = t.wallDetail;
           ctx.fillRect(sx, sy + by, S, 2);
-          // Vertical mortar lines
           for (let bx = -offsetX; bx < S; bx += brickW) {
             ctx.fillRect(sx + bx, sy + by, 2, brickH);
-            // Individual brick shading
             const bHash = ((col * 3 + bx) * 7 + (row * 5 + by) * 11) & 0xff;
             if (bHash > 200) {
               ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -132,10 +144,17 @@ export class TileMap {
           }
         }
 
+        // Pipe / conduit on some walls
+        if (r1 > 0.85 && r2 > 0.5) {
+          ctx.fillStyle = 'rgba(80,80,80,0.3)';
+          ctx.fillRect(sx + 20, sy, 4, S);
+          ctx.fillStyle = 'rgba(100,100,100,0.2)';
+          ctx.fillRect(sx + 20, sy, 4, 2);
+        }
+
         // Top edge highlight
         ctx.fillStyle = 'rgba(255,255,255,0.04)';
         ctx.fillRect(sx, sy, S, 1);
-        // Bottom shadow
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fillRect(sx, sy + S - 2, S, 2);
         break;
@@ -144,7 +163,7 @@ export class TileMap {
         ctx.fillStyle = this.waterFrame === 0 ? t.water1 : t.water2;
         ctx.fillRect(sx, sy, S, S);
 
-        // Multiple wave lines at different depths
+        // Multiple wave lines
         ctx.fillStyle = t.waterHighlight;
         const wo = this.waterFrame * 6;
         for (let wy = 4; wy < S; wy += 8) {
@@ -155,8 +174,14 @@ export class TileMap {
 
         // Shimmer highlights
         ctx.fillStyle = 'rgba(100,180,255,0.08)';
-        if (r1 > 0.5) {
-          ctx.fillRect(sx + r2 * 30, sy + r3 * 30, 6, 3);
+        if (r1 > 0.5) ctx.fillRect(sx + r2 * 30, sy + r3 * 30, 6, 3);
+
+        // Caustic light patterns
+        if (r2 > 0.6) {
+          ctx.fillStyle = 'rgba(120,200,255,0.06)';
+          ctx.beginPath();
+          ctx.arc(sx + r1 * 40, sy + r3 * 40, 6 + r2 * 4, 0, Math.PI * 2);
+          ctx.fill();
         }
 
         // Depth gradient at edges
@@ -169,21 +194,18 @@ export class TileMap {
         // Film set equipment on floor
         ctx.fillStyle = (col + row) % 2 === 0 ? t.floorAlt : t.floor;
         ctx.fillRect(sx, sy, S, S);
-        // Grout
         ctx.fillStyle = 'rgba(0,0,0,0.06)';
         ctx.fillRect(sx, sy, S, 1);
         ctx.fillRect(sx, sy, 1, S);
 
-        const equipType = (tile - 3 + Math.floor(r1 * 3)) % 6;
+        const equipType = (tile - 3 + Math.floor(r1 * 5)) % 10;
 
         if (equipType === 0) {
-          // C-Stand with light (tall tripod with a light head)
-          // Shadow
+          // C-Stand with light
           ctx.fillStyle = 'rgba(0,0,0,0.15)';
           ctx.beginPath();
           ctx.ellipse(sx + 24, sy + 42, 14, 4, 0, 0, Math.PI * 2);
           ctx.fill();
-          // Tripod legs
           ctx.strokeStyle = '#555555';
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -191,18 +213,20 @@ export class TileMap {
           ctx.moveTo(sx + 24, sy + 20); ctx.lineTo(sx + 38, sy + 42);
           ctx.moveTo(sx + 24, sy + 20); ctx.lineTo(sx + 24, sy + 44);
           ctx.stroke();
-          // Pole
           ctx.fillStyle = '#666666';
           ctx.fillRect(sx + 22, sy + 4, 4, 20);
-          // Light head
           ctx.fillStyle = '#333333';
           ctx.fillRect(sx + 14, sy + 2, 20, 12);
           ctx.fillStyle = '#888855';
           ctx.fillRect(sx + 16, sy + 4, 16, 8);
-          // Barn doors
           ctx.fillStyle = '#222222';
           ctx.fillRect(sx + 14, sy + 2, 2, 12);
           ctx.fillRect(sx + 32, sy + 2, 2, 12);
+          // Light glow
+          ctx.fillStyle = 'rgba(255,240,200,0.06)';
+          ctx.beginPath();
+          ctx.arc(sx + 24, sy + 8, 14, 0, Math.PI * 2);
+          ctx.fill();
         } else if (equipType === 1) {
           // Cable coil on ground
           ctx.fillStyle = 'rgba(0,0,0,0.1)';
@@ -217,25 +241,22 @@ export class TileMap {
           ctx.beginPath();
           ctx.ellipse(sx + 24, sy + 26, 8, 6, 0, 0, Math.PI * 2);
           ctx.stroke();
-          // Cable end trailing off
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(sx + 38, sy + 26);
           ctx.quadraticCurveTo(sx + 44, sy + 34, sx + 46, sy + 40);
           ctx.stroke();
         } else if (equipType === 2) {
-          // Apple box (wooden crate used on film sets)
+          // Apple box
           ctx.fillStyle = '#8B7355';
           ctx.fillRect(sx + 8, sy + 18, 32, 22);
           ctx.fillStyle = '#9B8365';
           ctx.fillRect(sx + 8, sy + 18, 32, 3);
           ctx.fillStyle = '#7B6345';
           ctx.fillRect(sx + 8, sy + 37, 32, 3);
-          // Handle holes
           ctx.fillStyle = '#5a4a32';
           ctx.fillRect(sx + 14, sy + 26, 8, 6);
           ctx.fillRect(sx + 26, sy + 26, 8, 6);
-          // Text
           ctx.fillStyle = 'rgba(0,0,0,0.2)';
           ctx.fillRect(sx + 12, sy + 34, 24, 2);
         } else if (equipType === 3) {
@@ -250,7 +271,6 @@ export class TileMap {
           ctx.fill();
           ctx.fillStyle = '#7B7050';
           ctx.fillRect(sx + 14, sy + 24, 20, 3);
-          // Tie string
           ctx.strokeStyle = '#554a30';
           ctx.lineWidth = 1;
           ctx.beginPath();
@@ -263,10 +283,8 @@ export class TileMap {
           ctx.beginPath();
           ctx.ellipse(sx + 24, sy + 42, 10, 3, 0, 0, Math.PI * 2);
           ctx.fill();
-          // Stand
           ctx.fillStyle = '#555555';
           ctx.fillRect(sx + 22, sy + 16, 4, 26);
-          // Reflector panel (angled)
           ctx.fillStyle = '#ccccbb';
           ctx.save();
           ctx.translate(sx + 24, sy + 14);
@@ -275,32 +293,122 @@ export class TileMap {
           ctx.fillStyle = '#ddddcc';
           ctx.fillRect(-14, -8, 28, 16);
           ctx.restore();
-        } else {
+        } else if (equipType === 5) {
           // Director's chair
           ctx.fillStyle = 'rgba(0,0,0,0.1)';
           ctx.fillRect(sx + 12, sy + 40, 24, 4);
-          // Legs
           ctx.fillStyle = '#8B7355';
           ctx.fillRect(sx + 14, sy + 20, 3, 24);
           ctx.fillRect(sx + 31, sy + 20, 3, 24);
-          // X brace
           ctx.strokeStyle = '#8B7355';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(sx + 15, sy + 24); ctx.lineTo(sx + 33, sy + 38);
           ctx.moveTo(sx + 33, sy + 24); ctx.lineTo(sx + 15, sy + 38);
           ctx.stroke();
-          // Seat
           ctx.fillStyle = '#1a3a1a';
           ctx.fillRect(sx + 12, sy + 28, 24, 4);
-          // Back
-          ctx.fillStyle = '#1a3a1a';
           ctx.fillRect(sx + 12, sy + 16, 24, 6);
           ctx.fillStyle = '#ffcc00';
           ctx.font = '4px monospace';
           ctx.textAlign = 'center';
           ctx.fillText('DIRECTOR', sx + 24, sy + 21);
           ctx.textAlign = 'left';
+        } else if (equipType === 6) {
+          // Film slate / clapperboard on ground
+          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 36, 14, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1a1a1a';
+          ctx.fillRect(sx + 8, sy + 16, 32, 22);
+          ctx.fillStyle = '#eeeeee';
+          ctx.fillRect(sx + 10, sy + 22, 28, 14);
+          // Clapper stripes
+          ctx.fillStyle = '#1a1a1a';
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(sx + 10 + i * 8, sy + 16);
+            ctx.lineTo(sx + 14 + i * 8, sy + 16);
+            ctx.lineTo(sx + 18 + i * 8, sy + 22);
+            ctx.lineTo(sx + 14 + i * 8, sy + 22);
+            ctx.closePath();
+            ctx.fill();
+          }
+          // Text lines
+          ctx.fillStyle = '#333333';
+          ctx.fillRect(sx + 12, sy + 25, 20, 1);
+          ctx.fillRect(sx + 12, sy + 29, 16, 1);
+          ctx.fillRect(sx + 12, sy + 33, 22, 1);
+        } else if (equipType === 7) {
+          // Monitor on stand (video village)
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 42, 10, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#444444';
+          ctx.fillRect(sx + 22, sy + 24, 4, 18);
+          // Monitor
+          ctx.fillStyle = '#1a1a1a';
+          ctx.fillRect(sx + 8, sy + 6, 32, 20);
+          ctx.fillStyle = '#0a2244';
+          ctx.fillRect(sx + 10, sy + 8, 28, 16);
+          // Screen glow
+          ctx.fillStyle = 'rgba(40,80,140,0.15)';
+          ctx.fillRect(sx + 10, sy + 8, 28, 16);
+          // Scanlines
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          for (let i = 0; i < 8; i++) {
+            ctx.fillRect(sx + 10, sy + 8 + i * 2, 28, 1);
+          }
+          // Power LED
+          ctx.fillStyle = '#00ff00';
+          ctx.beginPath();
+          ctx.arc(sx + 36, sy + 24, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (equipType === 8) {
+          // Dolly track section
+          ctx.fillStyle = '#555555';
+          ctx.fillRect(sx + 2, sy + 16, S - 4, 4);
+          ctx.fillRect(sx + 2, sy + 30, S - 4, 4);
+          // Cross ties
+          ctx.fillStyle = '#444444';
+          for (let i = 0; i < 3; i++) {
+            ctx.fillRect(sx + 8 + i * 14, sy + 14, 4, 22);
+          }
+          // Rail highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.06)';
+          ctx.fillRect(sx + 2, sy + 16, S - 4, 1);
+          ctx.fillRect(sx + 2, sy + 30, S - 4, 1);
+        } else {
+          // Stinger box (power distribution)
+          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          ctx.fillRect(sx + 6, sy + 38, 36, 6);
+          ctx.fillStyle = '#333333';
+          ctx.fillRect(sx + 6, sy + 18, 36, 22);
+          ctx.fillStyle = '#444444';
+          ctx.fillRect(sx + 6, sy + 18, 36, 3);
+          // Outlet holes
+          ctx.fillStyle = '#1a1a1a';
+          for (let i = 0; i < 3; i++) {
+            ctx.fillRect(sx + 10 + i * 10, sy + 24, 6, 8);
+            // Plugs in some
+            if ((hash >> (20 + i)) & 1) {
+              ctx.fillStyle = '#666666';
+              ctx.fillRect(sx + 11 + i * 10, sy + 25, 4, 6);
+              // Cable out
+              ctx.strokeStyle = '#222222';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(sx + 13 + i * 10, sy + 31);
+              ctx.lineTo(sx + 13 + i * 10, sy + 38);
+              ctx.stroke();
+              ctx.fillStyle = '#1a1a1a';
+            }
+          }
+          // Warning label
+          ctx.fillStyle = '#cc6600';
+          ctx.fillRect(sx + 8, sy + 36, 32, 2);
         }
         break;
       }

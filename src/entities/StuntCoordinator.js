@@ -28,6 +28,23 @@ export class StuntCoordinator {
     this.armsCrossed = true;
     this.headNodTimer = 0;
     this.isShouting = false;
+
+    // Fire state - coordinator pats himself out
+    this.onFire = false;
+    this.onFireTimer = 0;
+    this.patOutDuration = 3.0;
+    this.isPattingOut = false;
+  }
+
+  catchFire() {
+    if (!this.onFire) {
+      this.onFire = true;
+      this.onFireTimer = 0;
+      this.isPattingOut = true;
+      this.currentTip = 'I\'M ON FIRE!';
+      this.tipTimer = this.patOutDuration;
+      this.tipAlpha = 1;
+    }
   }
 
   placeNearCamera(filmCamera) {
@@ -45,6 +62,18 @@ export class StuntCoordinator {
     if (filmCamera) {
       this.worldX = filmCamera.x + filmCamera.width + 4 * 48;
       this.worldY = filmCamera.y;
+    }
+
+    // Handle on-fire / patting out
+    if (this.onFire) {
+      this.onFireTimer += dt;
+      if (this.onFireTimer >= this.patOutDuration) {
+        this.onFire = false;
+        this.isPattingOut = false;
+        this.currentTip = 'WHEW! THAT WAS CLOSE!';
+        this.tipTimer = 2.0;
+        this.tipAlpha = 1;
+      }
     }
 
     if (this.tipTimer > 0) {
@@ -90,6 +119,7 @@ export class StuntCoordinator {
 
     if (onScreen) {
       this._renderCharacter(ctx, sx, sy);
+      if (this.onFire) this._renderFireEffect(ctx, sx, sy);
       this._renderTipWorld(ctx, sx, sy);
     } else {
       this._renderOffscreenTip(ctx, sx, sy);
@@ -195,6 +225,44 @@ export class StuntCoordinator {
     ctx.fillStyle = 'rgba(60,50,30,0.3)';
     ctx.fillRect(x - 4, y - 10, 8, 4);
 
+    ctx.restore();
+  }
+
+  _renderFireEffect(ctx, x, y) {
+    const t = this.breatheTimer;
+    const jitter = Math.sin(t * 15) * 3;
+    const progress = Math.min(1, this.onFireTimer / this.patOutDuration);
+    const fireAlpha = 1 - progress * 0.8; // Fire fades as he pats it out
+
+    ctx.save();
+    ctx.globalAlpha = fireAlpha;
+
+    // Fire glow
+    ctx.fillStyle = 'rgba(255,80,0,0.25)';
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Flame tongues
+    for (let i = 0; i < 4; i++) {
+      const fx = x + Math.sin(t * 8 + i * 1.7) * 10;
+      const fy = y - 10 - i * 6 + jitter;
+      const sz = 5 + (1 - progress) * 6;
+      ctx.fillStyle = `rgba(255,${120 + i * 30},0,${0.5 * fireAlpha})`;
+      ctx.beginPath();
+      ctx.arc(fx, fy, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Patting animation - arms moving fast
+    if (this.isPattingOut) {
+      const patSpeed = Math.sin(t * 20) * 6;
+      ctx.fillStyle = '#d0a878';
+      ctx.fillRect(x - 14 + patSpeed, y - 2, 8, 10);
+      ctx.fillRect(x + 8 - patSpeed, y - 2, 8, 10);
+    }
+
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 

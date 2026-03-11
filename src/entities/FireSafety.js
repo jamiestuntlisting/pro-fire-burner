@@ -90,7 +90,7 @@ export class FireSafety extends Entity {
       let diff = targetAngle - this.facingAngle;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.facingAngle += diff * 0.08;
+      this.facingAngle += diff * 0.02;
       this.dirX = Math.cos(this.facingAngle);
       this.dirY = Math.sin(this.facingAngle);
     }

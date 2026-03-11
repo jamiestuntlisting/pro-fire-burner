@@ -107,10 +107,10 @@ export class LevelManager {
 
     // Pickups
     for (const pos of ent.gelPickups) {
-      entities.push(new Pickup(pos.col * TILE_SIZE + 6, pos.row * TILE_SIZE + 6, PICKUP_TYPE.GEL));
+      entities.push(new Pickup(pos.col * TILE_SIZE - 8, pos.row * TILE_SIZE - 8, PICKUP_TYPE.GEL));
     }
     for (const pos of ent.fuelPickups) {
-      entities.push(new Pickup(pos.col * TILE_SIZE + 6, pos.row * TILE_SIZE + 6, PICKUP_TYPE.FUEL));
+      entities.push(new Pickup(pos.col * TILE_SIZE - 8, pos.row * TILE_SIZE - 8, PICKUP_TYPE.FUEL));
     }
 
     // Extras

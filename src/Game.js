@@ -35,6 +35,7 @@ const STATES = {
   MENU: 'MENU',
   NAME_ENTRY: 'NAME_ENTRY',
   CALL_SHEET: 'CALL_SHEET',
+  LIGHTING_UP: 'LIGHTING_UP',
   COUNTDOWN: 'COUNTDOWN',
   PLAYING: 'PLAYING',
   END_ANIMATION: 'END_ANIMATION',
@@ -45,7 +46,6 @@ const STATES = {
   ADMIN_PANEL: 'ADMIN_PANEL',
 };
 
-// End animation configs per reason
 const END_ANIMS = {
   BURNED: { duration: 1.5, label: 'BURNED UP!' },
   EXTINGUISHED: { duration: 1.5, label: 'PUT OUT!' },
@@ -55,6 +55,11 @@ const END_ANIMS = {
   CLEAN_BURN: { duration: 2.0, label: 'CLEAN BURN!' },
   SAFE_OUT: { duration: 1.5, label: 'SAFE OUT!' },
 };
+
+// How long the performer must survive before fire safeties chase
+const SURVIVE_TIME = 15;
+// How many fire safeties spawn for the chase phase
+const CHASE_SAFETY_COUNT = 4;
 
 export class Game {
   constructor() {
@@ -68,23 +73,19 @@ export class Game {
     this.particles = new ParticleSystem();
     this.levelManager = new LevelManager();
 
-    // Rendering systems
     this.fireRenderer = new FireRenderer();
     this.trailRenderer = new TrailRenderer();
     this.ambientLight = new AmbientLight();
     this.hud = new HUD();
 
-    // UI screens
     this.mainMenu = new MainMenu();
     this.callSheet = new CallSheet();
     this.countdown = new Countdown();
     this.gameOverScreen = new GameOverScreen();
     this.highScoreBoard = new HighScoreBoard();
 
-    // Stunt coordinator
     this.stuntCoordinator = new StuntCoordinator();
 
-    // Game state
     this.state = STATES.MENU;
     this.player = null;
     this.tileMap = null;
@@ -96,25 +97,24 @@ export class Game {
     this.levelTimer = null;
     this.endReason = null;
 
-    // End animation state
     this.endAnimTimer = 0;
     this.endAnimDuration = 1.5;
 
-    // Fade transition
     this.fadeAlpha = 0;
     this.fadeDirection = 0;
     this.fadeCallback = null;
 
-    // Hit-stop
     this.hitStopFrames = 0;
 
-    // Game loop
     this.accumulator = 0;
     this.lastTime = 0;
     this.running = false;
 
-    // Player name (entered at start)
     this.playerName = '';
+
+    // Survive countdown timer
+    this.surviveTimer = 0;
+    this.chaseStarted = false;
   }
 
   async init() {
@@ -152,8 +152,6 @@ export class Game {
     requestAnimationFrame((t) => this.gameLoop(t));
   }
 
-  // --- STATE TRANSITIONS ---
-
   fadeToState(newState, setupFn) {
     this.fadeDirection = 1;
     this.fadeCallback = () => {
@@ -181,7 +179,6 @@ export class Game {
     this.camera.zoom = 0.27;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
-    // Always follow the player
     this.camera.setFollowMode();
 
     this.fireRenderer.clear();
@@ -198,6 +195,10 @@ export class Game {
 
     this.stuntCoordinator = new StuntCoordinator();
     this.hud.resetGoalBanner();
+
+    // Reset survive/chase state
+    this.surviveTimer = 0;
+    this.chaseStarted = false;
   }
 
   endLevel(reason) {
@@ -212,13 +213,11 @@ export class Game {
       return;
     }
 
-    // Don't extinguish or cut away yet - play end animation first
     const animConfig = END_ANIMS[reason] || { duration: 1.5, label: reason };
     this.endAnimTimer = 0;
     this.endAnimDuration = animConfig.duration;
     this.state = STATES.END_ANIMATION;
 
-    // Play sounds immediately
     if (reason === 'FELL_IN_WATER') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 30, {
         r: 100, g: 150, b: 255, life: 1.0, spread: 150,
@@ -236,17 +235,13 @@ export class Game {
       this.camera.shake(3, 0.3);
     }
 
-    // Extinguish player visually for relevant reasons
     if (reason === 'EXTINGUISHED' || reason === 'FELL_IN_WATER' || reason === 'SAFE_OUT') {
       this.player.extinguish();
       this.soundManager.playExtinguish();
     }
   }
 
-  // --- UPDATE ---
-
   update(dt) {
-    // Fade transition
     if (this.fadeDirection !== 0) {
       this.fadeAlpha += this.fadeDirection * dt * 3;
       if (this.fadeAlpha >= 1.0 && this.fadeDirection === 1) {
@@ -262,34 +257,17 @@ export class Game {
     }
 
     switch (this.state) {
-      case STATES.MENU:
-        this._updateMenu(dt);
-        break;
-      case STATES.NAME_ENTRY:
-        this._updateNameEntry(dt);
-        break;
-      case STATES.CALL_SHEET:
-        this._updateCallSheet(dt);
-        break;
-      case STATES.COUNTDOWN:
-        this._updateCountdown(dt);
-        break;
-      case STATES.PLAYING:
-        this._updatePlaying(dt);
-        break;
-      case STATES.END_ANIMATION:
-        this._updateEndAnimation(dt);
-        break;
-      case STATES.PA_ATTACK:
-        this._updatePAAttack(dt);
-        break;
+      case STATES.MENU: this._updateMenu(dt); break;
+      case STATES.NAME_ENTRY: this._updateNameEntry(dt); break;
+      case STATES.CALL_SHEET: this._updateCallSheet(dt); break;
+      case STATES.LIGHTING_UP: this._updateLightingUp(dt); break;
+      case STATES.COUNTDOWN: this._updateCountdown(dt); break;
+      case STATES.PLAYING: this._updatePlaying(dt); break;
+      case STATES.END_ANIMATION: this._updateEndAnimation(dt); break;
+      case STATES.PA_ATTACK: this._updatePAAttack(dt); break;
       case STATES.LEVEL_COMPLETE:
-      case STATES.GAME_OVER:
-        this._updateGameOver(dt);
-        break;
-      case STATES.HIGH_SCORE:
-        this._updateHighScore(dt);
-        break;
+      case STATES.GAME_OVER: this._updateGameOver(dt); break;
+      case STATES.HIGH_SCORE: this._updateHighScore(dt); break;
     }
   }
 
@@ -302,7 +280,6 @@ export class Game {
       this._nameEntryKeys = {};
       this._nameBackspaceHeld = false;
       this.fadeToState(STATES.NAME_ENTRY, () => {
-        // On mobile, focus the hidden input to bring up the keyboard
         this.input.startMobileNameEntry((val) => {
           this.playerName = val;
         });
@@ -320,11 +297,9 @@ export class Game {
   _updateNameEntry(dt) {
     this.input.setGameControlsVisible(false);
 
-    // If mobile input is active, use it as the sole source of truth
     if (this.input._mobileNameActive) {
       this.playerName = this.input.getMobileNameValue();
     } else {
-      // Physical keyboard input only
       for (const [code, pressed] of Object.entries(this.input.keys)) {
         if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
           const letter = code.replace('Key', '');
@@ -365,15 +340,40 @@ export class Game {
 
   _updateCallSheet(dt) {
     if (this.callSheet.update(dt, this.input)) {
-      this.fadeToState(STATES.COUNTDOWN, () => {
+      this.fadeToState(STATES.LIGHTING_UP, () => {
         this.startLevel();
-        this.countdown.reset(this.soundManager);
+        // Start the lighting-up animation
+        this.player.startLightingUp();
       });
+    }
+  }
+
+  _updateLightingUp(dt) {
+    this.input.setGameControlsVisible(false);
+    this.player.update(dt, null, this.collisionSystem);
+
+    this.camera.follow(this.player);
+    this.camera.update(dt);
+
+    // Update fire renderer with growing intensity during light-up
+    const intensity = this.player.getFlameIntensity();
+    this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+    this.particles.update(dt);
+
+    // When lighting-up animation completes, transition to countdown
+    if (this.player.lightUpTimer >= this.player.lightUpDuration) {
+      this.state = STATES.COUNTDOWN;
+      this.countdown.reset(this.soundManager);
     }
   }
 
   _updateCountdown(dt) {
     this.input.setGameControlsVisible(false);
+
+    // Keep fire going during countdown
+    const intensity = this.player.getFlameIntensity();
+    this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+
     if (this.countdown.update(dt)) {
       this.state = STATES.PLAYING;
       this.input.setGameControlsVisible(true);
@@ -430,6 +430,15 @@ export class Game {
       }
     }
 
+    // Survive countdown - after SURVIVE_TIME seconds, 4 fire safeties start chasing
+    if (this.player.isOnFire()) {
+      this.surviveTimer += dt;
+      if (!this.chaseStarted && this.surviveTimer >= SURVIVE_TIME) {
+        this.chaseStarted = true;
+        this._spawnChaseSafeties();
+      }
+    }
+
     if (this.player.isOnFire()) {
       this._checkPlayingCollisions(dt);
     }
@@ -437,7 +446,6 @@ export class Game {
     // Lay down mechanic
     if (this.input.actionJustPressed && this.player.isOnFire()) {
       if (this.player.layDown()) {
-        // ALL fire safeties rush to the downed performer
         const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
         for (const s of safeties) {
           s.moveToward(this.player.getCenterX(), this.player.getCenterY());
@@ -446,8 +454,6 @@ export class Game {
     }
 
     if (this.player.isLayingDown()) {
-      // Performer stays down - no getting back up
-      // End level 2 seconds after going down
       if (this.player.layDownTimer > 2.0) {
         this.endLevel('SAFE_OUT');
         return;
@@ -461,6 +467,9 @@ export class Game {
 
     this.stuntCoordinator.update(dt, this.player.isMoving, this.filmCamera);
 
+    // Check camera/coordinator proximity - fire spreads
+    this._checkFireSpread(px, py);
+
     if (this.player.gel <= 0) {
       this.endLevel('BURNED');
     } else if (this.player.fuel <= 0) {
@@ -472,6 +481,54 @@ export class Game {
     }
 
     this.entities = this.entities.filter(e => !e.dead);
+  }
+
+  _spawnChaseSafeties() {
+    // Spawn 4 fire safeties at edges of the map, they chase the player
+    const px = this.player.x;
+    const py = this.player.y;
+    const offsets = [
+      { x: -TILE_SIZE * 8, y: -TILE_SIZE * 8 },
+      { x: TILE_SIZE * 8, y: -TILE_SIZE * 8 },
+      { x: -TILE_SIZE * 8, y: TILE_SIZE * 8 },
+      { x: TILE_SIZE * 8, y: TILE_SIZE * 8 },
+    ];
+
+    for (const off of offsets) {
+      const sx = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.widthPx - TILE_SIZE * 3, px + off.x));
+      const sy = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.heightPx - TILE_SIZE * 3, py + off.y));
+      const angle = Math.atan2(py - sy, px - sx);
+      const safety = new FireSafety(sx, sy, angle);
+      safety.followSpeed = safety.followSpeed * 3; // Chase safeties move faster
+      safety.followDistance = TILE_SIZE * 2; // Get closer before spraying
+      this.entities.push(safety);
+    }
+
+    this.camera.shake(4, 0.5);
+  }
+
+  _checkFireSpread(px, py) {
+    // Camera catches fire if performer gets too close
+    if (this.filmCamera && !this.filmCamera.onFire && this.player.isOnFire()) {
+      const camDist = distance(px, py, this.filmCamera.getCenterX(), this.filmCamera.getCenterY());
+      if (camDist < TILE_SIZE * 1.5) {
+        this.filmCamera.catchFire();
+        this.particles.emitBurst(this.filmCamera.getCenterX(), this.filmCamera.getCenterY(), 15, {
+          r: 255, g: 100, b: 0, life: 0.8, spread: 60,
+        });
+      }
+    }
+
+    // Coordinator catches fire if performer gets too close - he pats himself out
+    if (this.player.isOnFire()) {
+      const coordDist = distance(px, py, this.stuntCoordinator.worldX, this.stuntCoordinator.worldY);
+      if (coordDist < TILE_SIZE * 1.5 && !this.stuntCoordinator.onFire) {
+        this.stuntCoordinator.catchFire();
+        this.particles.emitBurst(this.stuntCoordinator.worldX, this.stuntCoordinator.worldY, 10, {
+          r: 255, g: 120, b: 0, life: 0.6, spread: 40,
+        });
+      }
+    }
   }
 
   _checkPlayingCollisions(dt) {
@@ -489,23 +546,18 @@ export class Game {
       }
     };
 
-    // Fire safeties - spray accelerates fuel loss instead of instant extinguish
     for (const entity of this.entities) {
       if (entity.dead) continue;
-
       if (entity instanceof FireSafety) {
         if (entity.isPlayerInSpray(px, py)) {
-          // Accelerate fuel drain instead of instant kill
           this.player.fuel -= entity.fuelDrainRate * dt;
           this.player.fuel = Math.max(0, this.player.fuel);
-          // Also drain some gel
           this.player.gel -= entity.fuelDrainRate * 0.3 * dt;
           this.player.gel = Math.max(0, this.player.gel);
         }
       }
     }
 
-    // Film camera FOV
     if (this.filmCamera) {
       const lostShot = this.filmCamera.updatePlayerTracking(px, py, dt);
       if (lostShot) {
@@ -514,7 +566,6 @@ export class Game {
       }
     }
 
-    // Camera car
     if (this.cameraCar) {
       if (this.cameraCar.hasReachedPlayer(this.player.y)) {
         tryEnd('ROADKILL');
@@ -523,7 +574,6 @@ export class Game {
       }
     }
 
-    // Extras and Principals
     for (const entity of this.entities) {
       if (entity.dead) continue;
 
@@ -550,7 +600,6 @@ export class Game {
       }
     }
 
-    // Torches
     let maxDrainMult = 1.0;
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof Torch)) continue;
@@ -560,7 +609,6 @@ export class Game {
     }
     this.player.drainMultiplier = maxDrainMult;
 
-    // Propane cannons
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof PropaneCannon)) continue;
       if (entity.isPlayerInBurst(px, py)) {
@@ -574,10 +622,18 @@ export class Game {
       }
     }
 
-    // Pickups
+    // Use distance-based pickup collection for a generous catch radius
+    const playerCX = this.player.x + this.player.width / 2;
+    const playerCY = this.player.y + this.player.height / 2;
+    const pickupRadius = 48; // generous catch distance in pixels
+
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof Pickup)) continue;
-      if (this.collisionSystem.entitiesOverlap(this.player, entity)) {
+      const pickupCX = entity.x + entity.width / 2;
+      const pickupCY = entity.y + entity.height / 2;
+      const dx = playerCX - pickupCX;
+      const dy = playerCY - pickupCY;
+      if (dx * dx + dy * dy < pickupRadius * pickupRadius) {
         if (entity.type === PICKUP_TYPE.GEL) {
           this.player.addGel();
           this.soundManager.playGelPickup();
@@ -598,17 +654,14 @@ export class Game {
     this.input.setGameControlsVisible(false);
     this.endAnimTimer += dt;
 
-    // Keep updating rendering during end animation
     this.camera.update(dt);
     this.particles.update(dt);
 
-    // Keep fire rendering going for burn-related ends
     if (this.player.isOnFire()) {
       const intensity = this.player.getFlameIntensity();
       this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
     }
 
-    // Keep entities moving during end animation
     for (const entity of this.entities) {
       if (entity.dead) continue;
       if (entity instanceof FireSafety) {
@@ -621,12 +674,9 @@ export class Game {
       }
     }
 
-    // Reason-specific animations during the delay
     this._playEndReasonAnimation(dt);
 
-    // After animation completes, transition
     if (this.endAnimTimer >= this.endAnimDuration) {
-      // Now extinguish if we haven't already
       if (this.player.isOnFire()) {
         this.player.extinguish();
       }
@@ -652,7 +702,6 @@ export class Game {
         }
         if (t > 0.5 && t < 0.6) this.player.extinguish();
         break;
-
       case 'EXTINGUISHED':
         if (Math.random() < 0.4) {
           this.particles.emitBurst(px + (Math.random() - 0.5) * 24, py - 15, 1, {
@@ -660,7 +709,6 @@ export class Game {
           });
         }
         break;
-
       case 'FELL_IN_WATER':
         if (t < 0.3 && Math.random() < 0.5) {
           this.particles.emitBurst(px, py, 2, {
@@ -668,16 +716,12 @@ export class Game {
           });
         }
         break;
-
       case 'ROADKILL':
         if (t < 0.3) this.camera.shake(8, 0.1);
         if (t < 0.2 && Math.random() < 0.5) {
-          this.particles.emitBurst(px, py, 3, {
-            r: 150, g: 120, b: 80, life: 0.8, spread: 90,
-          });
+          this.particles.emitBurst(px, py, 3, { r: 150, g: 120, b: 80, life: 0.8, spread: 90 });
         }
         break;
-
       case 'LOST_THE_SHOT':
         if (Math.random() < 0.2) {
           this.particles.emitBurst(px + (Math.random() - 0.5) * 60, py - 30, 1, {
@@ -685,18 +729,15 @@ export class Game {
           });
         }
         break;
-
       case 'CLEAN_BURN':
         if (Math.random() < 0.4) {
           this.particles.emitBurst(
-            px + (Math.random() - 0.5) * 60,
-            py + (Math.random() - 0.5) * 60,
+            px + (Math.random() - 0.5) * 60, py + (Math.random() - 0.5) * 60,
             1, { r: 255, g: 255, b: 100, life: 0.8, spread: 45 }
           );
         }
         if (t < 0.5) this.camera.zoomTo(0.23);
         break;
-
       case 'SAFE_OUT':
         if (Math.random() < 0.3) {
           this.particles.emitBurst(px, py - 45, 1, {
@@ -767,6 +808,10 @@ export class Game {
       case STATES.CALL_SHEET:
         this.callSheet.render(ctx);
         break;
+      case STATES.LIGHTING_UP:
+        this._renderLevel(ctx);
+        this._renderLightingUpOverlay(ctx);
+        break;
       case STATES.COUNTDOWN:
         this._renderLevel(ctx);
         this.countdown.render(ctx);
@@ -774,6 +819,7 @@ export class Game {
       case STATES.PLAYING:
         this._renderLevel(ctx);
         this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
+        this._renderSurviveTimer(ctx);
         this.stuntCoordinator.render(ctx, this.camera);
         break;
       case STATES.END_ANIMATION:
@@ -797,11 +843,55 @@ export class Game {
         break;
     }
 
-    // Fade overlay
     if (this.fadeAlpha > 0) {
       ctx.fillStyle = `rgba(0,0,0,${this.fadeAlpha})`;
       ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
     }
+  }
+
+  _renderLightingUpOverlay(ctx) {
+    if (!this.player) return;
+    const progress = this.player.getLightUpProgress();
+
+    ctx.save();
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'center';
+
+    let text = 'LIGHTING UP...';
+    if (progress > 0.7) text = 'READY TO BURN!';
+    else if (progress > 0.4) text = 'FIRE SPREADING...';
+
+    const alpha = Math.min(1, progress * 3);
+    ctx.globalAlpha = alpha;
+    ctx.fillText(text, VIEWPORT_WIDTH / 2, 60);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  _renderSurviveTimer(ctx) {
+    if (this.chaseStarted) return;
+    if (!this.player || !this.player.isOnFire()) return;
+
+    const remaining = Math.max(0, Math.ceil(SURVIVE_TIME - this.surviveTimer));
+    if (remaining <= 0) return;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+
+    // Warning when close to chase
+    if (remaining <= 5) {
+      const flash = Math.sin(this.surviveTimer * 8) > 0;
+      ctx.fillStyle = flash ? '#ff4444' : '#ffaa00';
+      ctx.font = 'bold 18px monospace';
+      ctx.fillText(`FIRE SAFETIES IN ${remaining}s`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '14px monospace';
+      ctx.fillText(`SURVIVE: ${remaining}s`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
+    }
+
+    ctx.restore();
   }
 
   _renderEndAnimOverlay(ctx) {
@@ -810,7 +900,6 @@ export class Game {
     const animConfig = END_ANIMS[this.endReason] || { label: '' };
     const t = this.endAnimTimer;
 
-    // Fade in the label text
     let textAlpha = Math.min(1, t * 3);
     if (t > this.endAnimDuration - 0.3) {
       textAlpha = (this.endAnimDuration - t) / 0.3;
@@ -819,7 +908,6 @@ export class Game {
     ctx.save();
     ctx.globalAlpha = textAlpha;
 
-    // Big centered text
     const info = END_REASONS[this.endReason];
     const isWin = info && !info.isGameOver;
 
@@ -827,11 +915,9 @@ export class Game {
     ctx.font = 'bold 32px monospace';
     ctx.textAlign = 'center';
 
-    // Slight bounce animation
     const bounce = t < 0.3 ? Math.sin(t * 20) * 6 : 0;
     ctx.fillText(animConfig.label, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 40 + bounce);
 
-    // Subtitle
     if (isWin) {
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px monospace';
@@ -857,9 +943,7 @@ export class Game {
     ctx.font = '14px monospace';
     ctx.fillText('This will appear on the high score board', cx, 180);
 
-    // On mobile, the HTML input handles display; on desktop, draw the canvas box
     if (!this.input._mobileNameActive) {
-      // Canvas name display box (desktop)
       ctx.fillStyle = '#1a1a2a';
       ctx.fillRect(cx - 140, 220, 280, 48);
       ctx.strokeStyle = '#ff6600';
@@ -871,13 +955,11 @@ export class Game {
       const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
       ctx.fillText(this.playerName + cursor, cx, 252);
     } else {
-      // Mobile - just show the typed name larger on canvas (input is at bottom)
       ctx.fillStyle = '#ffcc00';
       ctx.font = 'bold 28px monospace';
       ctx.fillText(this.playerName, cx, 250);
     }
 
-    // Hint
     if (this.playerName.length > 0) {
       const blink = Math.sin(Date.now() / 400) > 0;
       if (blink) {
@@ -910,7 +992,7 @@ export class Game {
 
     if (this.player) {
       this.player.render(ctx, this.camera);
-      if (this.player.isOnFire()) {
+      if (this.player.isOnFire() || this.player.isLightingUp()) {
         this.fireRenderer.render(ctx, this.camera);
       }
     }

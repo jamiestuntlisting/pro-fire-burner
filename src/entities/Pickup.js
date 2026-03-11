@@ -9,8 +9,8 @@ export class Pickup extends Entity {
   constructor(x, y, type) {
     super(x, y);
     this.type = type;
-    this.width = 36;
-    this.height = 36;
+    this.width = 64;
+    this.height = 64;
     this.pulseTimer = Math.random() * Math.PI * 2;
     this.collected = false;
     this.bobTimer = Math.random() * Math.PI * 2;

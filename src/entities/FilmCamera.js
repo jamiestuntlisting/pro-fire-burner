@@ -1,6 +1,6 @@
 import { Entity } from '../engine/Entity.js';
 import { TILE_SIZE, FOV_GRACE_PERIOD, VIEWPORT_WIDTH, VIEWPORT_HEIGHT } from '../constants.js';
-import { pointInCone } from '../utils/math.js';
+import { pointInCone, distance } from '../utils/math.js';
 
 export class FilmCamera extends Entity {
   constructor(x, y, config) {
@@ -8,14 +8,15 @@ export class FilmCamera extends Entity {
     this.width = 48;
     this.height = 48;
 
-    this.panSpeed = (config && config.cameraPanSpeed) || 30;
+    // Pan (rotation) instead of dolly (translation) - camera stays in place and pans
+    this.panSpeed = ((config && config.cameraPanSpeed) || 30) * 0.008;
     this.panDirection = 1;
-    this.panMin = x - (config && config.panRange ? config.panRange : 100);
-    this.panMax = x + (config && config.panRange ? config.panRange : 100);
+    this.panAngleRange = ((config && config.cameraFOV) || 70) * (Math.PI / 360);
 
     this.fovAngle = ((config && config.cameraFOV) || 70) * (Math.PI / 180);
     this.fovRange = TILE_SIZE * 30;
-    this.facingAngle = Math.PI / 2;
+    this.facingAngle = Math.PI / 2; // Default facing down
+    this.baseFacingAngle = Math.PI / 2;
 
     this.playerInFOV = true;
     this.offCameraTimer = 0;
@@ -23,11 +24,22 @@ export class FilmCamera extends Entity {
     this.lensFlashTimer = 0;
     this.reelRotation = 0;
     this.recordingPulse = 0;
+
+    // Camera catches fire
+    this.onFire = false;
+    this.onFireTimer = 0;
+    this.fireParticles = [];
   }
 
   setPanBounds(min, max) {
-    this.panMin = min;
-    this.panMax = max;
+    // Legacy - no longer used for dolly
+  }
+
+  catchFire() {
+    if (!this.onFire) {
+      this.onFire = true;
+      this.onFireTimer = 0;
+    }
   }
 
   isPlayerInFOV(playerX, playerY) {
@@ -40,18 +52,42 @@ export class FilmCamera extends Entity {
   }
 
   update(dt) {
-    this.x += this.panSpeed * this.panDirection * dt;
-    if (this.x >= this.panMax) {
-      this.x = this.panMax;
+    // Pan back and forth by rotating the facing angle
+    this.facingAngle += this.panSpeed * this.panDirection * dt;
+    if (this.facingAngle >= this.baseFacingAngle + this.panAngleRange) {
+      this.facingAngle = this.baseFacingAngle + this.panAngleRange;
       this.panDirection = -1;
-    } else if (this.x <= this.panMin) {
-      this.x = this.panMin;
+    } else if (this.facingAngle <= this.baseFacingAngle - this.panAngleRange) {
+      this.facingAngle = this.baseFacingAngle - this.panAngleRange;
       this.panDirection = 1;
     }
 
     this.lensFlashTimer += dt;
     this.reelRotation += dt * 3;
     this.recordingPulse += dt;
+
+    // Fire state
+    if (this.onFire) {
+      this.onFireTimer += dt;
+      // Emit fire particles
+      if (Math.random() < 0.5) {
+        this.fireParticles.push({
+          x: this.getCenterX() + (Math.random() - 0.5) * 30,
+          y: this.y + Math.random() * 20,
+          vy: -40 - Math.random() * 60,
+          vx: (Math.random() - 0.5) * 20,
+          life: 0.4 + Math.random() * 0.4,
+          size: 3 + Math.random() * 5,
+        });
+      }
+      for (let i = this.fireParticles.length - 1; i >= 0; i--) {
+        const p = this.fireParticles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) this.fireParticles.splice(i, 1);
+      }
+    }
   }
 
   updatePlayerTracking(playerX, playerY, dt) {
@@ -80,154 +116,76 @@ export class FilmCamera extends Entity {
 
     ctx.save();
 
-    // Tripod legs — heavy industrial mounting struts
+    // Tripod legs
     ctx.strokeStyle = '#3a3a3a';
     ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.moveTo(sx + 12, sy + 36);
-    ctx.lineTo(sx + 3, sy + 48);
-    ctx.moveTo(sx + 24, sy + 39);
-    ctx.lineTo(sx + 24, sy + 48);
-    ctx.moveTo(sx + 36, sy + 36);
-    ctx.lineTo(sx + 45, sy + 48);
+    ctx.moveTo(sx + 12, sy + 36); ctx.lineTo(sx + 3, sy + 48);
+    ctx.moveTo(sx + 24, sy + 39); ctx.lineTo(sx + 24, sy + 48);
+    ctx.moveTo(sx + 36, sy + 36); ctx.lineTo(sx + 45, sy + 48);
     ctx.stroke();
 
-    // Reinforcement bolts on struts
     ctx.fillStyle = '#505050';
-    ctx.beginPath();
-    ctx.arc(sx + 12, sy + 36, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(sx + 36, sy + 36, 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 12, sy + 36, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 36, sy + 36, 2, 0, Math.PI * 2); ctx.fill();
 
-    // Tripod plate — thick armored mounting plate
+    // Tripod plate
     ctx.fillStyle = '#2a2a2a';
     this._roundRect(ctx, sx + 9, sy + 33, 30, 6, 3);
-    // Plate edge highlight
     ctx.fillStyle = 'rgba(255,255,255,0.04)';
     ctx.fillRect(sx + 10, sy + 33, 28, 1);
 
-    // Camera body — dark industrial housing
+    // Camera body
     const bodyGrad = ctx.createLinearGradient(sx + 3, sy + 9, sx + 45, sy + 36);
-    bodyGrad.addColorStop(0, '#1a1a1e');
-    bodyGrad.addColorStop(0.2, '#222228');
-    bodyGrad.addColorStop(0.5, '#1c1c22');
-    bodyGrad.addColorStop(0.8, '#151518');
-    bodyGrad.addColorStop(1, '#0e0e12');
+    bodyGrad.addColorStop(0, this.onFire ? '#2a1a0a' : '#1a1a1e');
+    bodyGrad.addColorStop(0.5, this.onFire ? '#1c1208' : '#1c1c22');
+    bodyGrad.addColorStop(1, this.onFire ? '#0e0a04' : '#0e0e12');
     ctx.fillStyle = bodyGrad;
     this._roundRect(ctx, sx + 3, sy + 9, 42, 27, 6);
 
-    // Outer casing bevel — top edge
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fillRect(sx + 6, sy + 9, 36, 2);
-
-    // Bottom shadow edge
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(sx + 6, sy + 34, 36, 2);
 
-    // Side panel grooves (ventilation/industrial detail)
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(sx + 6, sy + 14 + i * 5);
-      ctx.lineTo(sx + 12, sy + 14 + i * 5);
-      ctx.stroke();
-    }
-
-    // Lens — large surveillance optic
+    // Lens
     const lensCx = sx + 24;
     const lensCy = sy + 21;
-
-    // Outer lens ring — dark metal
     ctx.fillStyle = '#0a0a0e';
-    ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Lens ring detail
+    ctx.beginPath(); ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#333338';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(lensCx, lensCy, 13.5, 0, Math.PI * 2); ctx.stroke();
 
-    // Inner lens — cold surveillance glow
     const lensGrad = ctx.createRadialGradient(lensCx - 3, lensCy - 3, 0, lensCx, lensCy, 10.5);
     lensGrad.addColorStop(0, '#4a6080');
-    lensGrad.addColorStop(0.2, '#3a5070');
     lensGrad.addColorStop(0.5, '#2a3a55');
-    lensGrad.addColorStop(0.8, '#1a2840');
     lensGrad.addColorStop(1, '#101828');
     ctx.fillStyle = lensGrad;
-    ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 10.5, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(lensCx, lensCy, 10.5, 0, Math.PI * 2); ctx.fill();
 
-    // Iris ring
     ctx.strokeStyle = '#3a4a60';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(lensCx, lensCy, 6, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(lensCx, lensCy, 6, 0, Math.PI * 2); ctx.stroke();
 
-    // Inner iris detail lines
-    ctx.strokeStyle = 'rgba(60,80,110,0.4)';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4;
-      ctx.beginPath();
-      ctx.moveTo(lensCx + Math.cos(a) * 4, lensCy + Math.sin(a) * 4);
-      ctx.lineTo(lensCx + Math.cos(a) * 9, lensCy + Math.sin(a) * 9);
-      ctx.stroke();
-    }
-
-    // Lens flare
     if (Math.sin(this.lensFlashTimer * 2) > 0.8) {
       ctx.fillStyle = 'rgba(200,220,255,0.5)';
-      ctx.beginPath();
-      ctx.arc(lensCx - 3, lensCy - 3, 4.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(lensCx - 3, lensCy - 3, 4.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Specular highlight
-    ctx.fillStyle = 'rgba(180,200,230,0.12)';
-    ctx.beginPath();
-    ctx.arc(lensCx - 3, lensCy - 3, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Recording light — threat indicator
+    // Recording light
     const recPulse = Math.sin(this.recordingPulse * 4) * 0.3 + 0.7;
     ctx.fillStyle = `rgba(255,0,0,${recPulse})`;
-    ctx.beginPath();
-    ctx.arc(sx + 39, sy + 12, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    // Outer glow
+    ctx.beginPath(); ctx.arc(sx + 39, sy + 12, 4.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(255,0,0,${recPulse * 0.3})`;
-    ctx.beginPath();
-    ctx.arc(sx + 39, sy + 12, 9, 0, Math.PI * 2);
-    ctx.fill();
-    // Secondary scan pulse
-    ctx.fillStyle = `rgba(255,30,0,${recPulse * 0.1})`;
-    ctx.beginPath();
-    ctx.arc(sx + 39, sy + 12, 14, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 39, sy + 12, 9, 0, Math.PI * 2); ctx.fill();
 
-    // Film reel — heavy industrial spool
+    // Film reel
     ctx.fillStyle = '#1a1a1e';
-    ctx.beginPath();
-    ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Reel outer ring
+    ctx.beginPath(); ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#333338';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Reel spokes
+    ctx.beginPath(); ctx.arc(sx + 9, sy + 6, 9, 0, Math.PI * 2); ctx.stroke();
     ctx.strokeStyle = '#444448';
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 4; i++) {
@@ -237,32 +195,31 @@ export class FilmCamera extends Entity {
       ctx.lineTo(sx + 9 + Math.cos(angle) * 7.5, sy + 6 + Math.sin(angle) * 7.5);
       ctx.stroke();
     }
-
-    // Reel center hub
     ctx.fillStyle = '#555558';
-    ctx.beginPath();
-    ctx.arc(sx + 9, sy + 6, 3, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 9, sy + 6, 3, 0, Math.PI * 2); ctx.fill();
 
-    // Viewfinder — armored scope housing
+    // Viewfinder
     ctx.fillStyle = '#141418';
     this._roundRect(ctx, sx + 42, sy + 15, 9, 12, 3);
-    // Viewfinder screen
     ctx.fillStyle = '#1a2530';
     ctx.fillRect(sx + 44, sy + 18, 5, 6);
-    // Viewfinder scanline
-    const scanY = sy + 18 + ((this.lensFlashTimer * 8) % 6);
-    ctx.fillStyle = 'rgba(60,100,140,0.2)';
-    ctx.fillRect(sx + 44, scanY, 5, 1);
 
-    // Data port details on side
-    ctx.fillStyle = '#0c0c10';
-    ctx.fillRect(sx + 4, sy + 28, 4, 2);
-    ctx.fillRect(sx + 4, sy + 31, 4, 2);
-
-    // Serial number / designation mark
-    ctx.fillStyle = 'rgba(80,90,100,0.15)';
-    ctx.fillRect(sx + 16, sy + 32, 16, 2);
+    // Fire effect on camera
+    if (this.onFire) {
+      for (const p of this.fireParticles) {
+        const ps = camera.worldToScreen(p.x, p.y);
+        const ratio = p.life / 0.8;
+        ctx.fillStyle = `rgba(255,${Math.floor(100 + ratio * 100)},0,${ratio * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(Math.floor(ps.x), Math.floor(ps.y), p.size * ratio, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Smoke
+      ctx.fillStyle = 'rgba(60,60,60,0.2)';
+      ctx.beginPath();
+      ctx.arc(sx + 24, sy - 10 + Math.sin(this.onFireTimer * 3) * 5, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
@@ -279,7 +236,6 @@ export class FilmCamera extends Entity {
 
     ctx.save();
 
-    // Bright light inside the cone
     if (this.playerInFOV) {
       const grad = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, range);
       grad.addColorStop(0, 'rgba(255,240,180,0.15)');
@@ -296,20 +252,15 @@ export class FilmCamera extends Entity {
       ctx.fillStyle = grad;
     }
 
-    // Draw cone
     ctx.beginPath();
     ctx.moveTo(screen.x, screen.y);
     for (let i = 0; i <= steps; i++) {
       const a = angle1 + (angle2 - angle1) * (i / steps);
-      ctx.lineTo(
-        screen.x + Math.cos(a) * range,
-        screen.y + Math.sin(a) * range
-      );
+      ctx.lineTo(screen.x + Math.cos(a) * range, screen.y + Math.sin(a) * range);
     }
     ctx.closePath();
     ctx.fill();
 
-    // Cone edge lines
     ctx.strokeStyle = this.playerInFOV ? 'rgba(255,220,100,0.3)' : 'rgba(255,80,80,0.4)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -319,28 +270,17 @@ export class FilmCamera extends Entity {
     ctx.lineTo(screen.x + Math.cos(angle2) * range, screen.y + Math.sin(angle2) * range);
     ctx.stroke();
 
-    // Dark overlay OUTSIDE the cone
+    // Dark overlay outside cone
     const vw = VIEWPORT_WIDTH;
     const vh = VIEWPORT_HEIGHT;
-
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(vw, 0);
-    ctx.lineTo(vw, vh);
-    ctx.lineTo(0, vh);
-    ctx.closePath();
-
-    // Reverse-wind the cone to cut it out
+    ctx.moveTo(0, 0); ctx.lineTo(vw, 0); ctx.lineTo(vw, vh); ctx.lineTo(0, vh); ctx.closePath();
     ctx.moveTo(screen.x, screen.y);
     for (let i = steps; i >= 0; i--) {
       const a = angle1 + (angle2 - angle1) * (i / steps);
-      ctx.lineTo(
-        screen.x + Math.cos(a) * range,
-        screen.y + Math.sin(a) * range
-      );
+      ctx.lineTo(screen.x + Math.cos(a) * range, screen.y + Math.sin(a) * range);
     }
     ctx.closePath();
-
     ctx.fillStyle = this.playerInFOV ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.25)';
     ctx.fill();
 

@@ -62,12 +62,18 @@ export class CollisionSystem {
     return false;
   }
 
-  // Check if entity overlaps water
+  // Check if entity's feet are in water
   isOnWater(entity) {
     if (!this.tileMap) return false;
-    const cx = entity.getCenterX();
-    const cy = entity.getCenterY();
-    return this.tileMap.isWater(cx, cy);
+    // Use feet position (bottom center of entity)
+    const fx = entity.x + entity.width / 2;
+    const fy = entity.y + entity.height - 4; // bottom of sprite, slight margin
+    // Check both feet positions for wider entities
+    const leftFoot = entity.x + entity.width * 0.25;
+    const rightFoot = entity.x + entity.width * 0.75;
+    return this.tileMap.isWater(fx, fy) ||
+           this.tileMap.isWater(leftFoot, fy) ||
+           this.tileMap.isWater(rightFoot, fy);
   }
 
   // Query nearby entities of a specific type
