@@ -1,5 +1,5 @@
 import { Entity } from '../engine/Entity.js';
-import { TILE_SIZE } from '../constants.js';
+import { TILE_SIZE, PLAYER_SPEED } from '../constants.js';
 import { pointInCone, distance } from '../utils/math.js';
 
 export class FireSafety extends Entity {
