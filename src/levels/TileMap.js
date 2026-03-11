@@ -32,8 +32,7 @@ export class TileMap {
   }
 
   isSolid(x, y) {
-    const tile = this.getTileAtWorld(x, y);
-    return tile === TILE_WALL || tile >= 3; // walls and props are solid
+    return this.getTileAtWorld(x, y) === TILE_WALL;
   }
 
   isWater(x, y) {
@@ -42,12 +41,12 @@ export class TileMap {
 
   isWalkable(x, y) {
     const tile = this.getTileAtWorld(x, y);
-    return tile === TILE_FLOOR || tile === TILE_WATER;
+    return tile !== TILE_WALL;
   }
 
   isWalkableTile(col, row) {
     const tile = this.getTile(col, row);
-    return tile === TILE_FLOOR || tile === TILE_WATER;
+    return tile !== TILE_WALL;
   }
 
   render(ctx, camera) {
@@ -167,55 +166,141 @@ export class TileMap {
         break;
       }
       default: {
-        // Props - varied decorative objects
+        // Film set equipment on floor
         ctx.fillStyle = (col + row) % 2 === 0 ? t.floorAlt : t.floor;
         ctx.fillRect(sx, sy, S, S);
-
         // Grout
         ctx.fillStyle = 'rgba(0,0,0,0.06)';
         ctx.fillRect(sx, sy, S, 1);
         ctx.fillRect(sx, sy, 1, S);
 
-        const propType = Math.floor(r1 * 4);
-        const pc = t.prop || '#555';
-        ctx.fillStyle = pc;
+        const equipType = (tile - 3 + Math.floor(r1 * 3)) % 6;
 
-        if (propType === 0) {
-          // Crate
-          ctx.fillRect(sx + 6, sy + 6, 36, 36);
-          ctx.fillStyle = 'rgba(255,255,255,0.06)';
-          ctx.fillRect(sx + 6, sy + 6, 36, 2);
-          ctx.fillRect(sx + 6, sy + 6, 2, 36);
-          ctx.fillStyle = 'rgba(0,0,0,0.08)';
-          // Cross planks
-          ctx.fillRect(sx + 6, sy + 22, 36, 3);
-          ctx.fillRect(sx + 22, sy + 6, 3, 36);
-        } else if (propType === 1) {
-          // Barrel
+        if (equipType === 0) {
+          // C-Stand with light (tall tripod with a light head)
+          // Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.15)';
           ctx.beginPath();
-          ctx.arc(sx + 24, sy + 24, 16, 0, Math.PI * 2);
+          ctx.ellipse(sx + 24, sy + 42, 14, 4, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.06)';
+          // Tripod legs
+          ctx.strokeStyle = '#555555';
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(sx + 24, sy + 24, 12, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.moveTo(sx + 24, sy + 20); ctx.lineTo(sx + 10, sy + 42);
+          ctx.moveTo(sx + 24, sy + 20); ctx.lineTo(sx + 38, sy + 42);
+          ctx.moveTo(sx + 24, sy + 20); ctx.lineTo(sx + 24, sy + 44);
+          ctx.stroke();
+          // Pole
+          ctx.fillStyle = '#666666';
+          ctx.fillRect(sx + 22, sy + 4, 4, 20);
+          // Light head
+          ctx.fillStyle = '#333333';
+          ctx.fillRect(sx + 14, sy + 2, 20, 12);
+          ctx.fillStyle = '#888855';
+          ctx.fillRect(sx + 16, sy + 4, 16, 8);
+          // Barn doors
+          ctx.fillStyle = '#222222';
+          ctx.fillRect(sx + 14, sy + 2, 2, 12);
+          ctx.fillRect(sx + 32, sy + 2, 2, 12);
+        } else if (equipType === 1) {
+          // Cable coil on ground
           ctx.fillStyle = 'rgba(0,0,0,0.1)';
-          ctx.fillRect(sx + 10, sy + 22, 28, 3);
-        } else if (propType === 2) {
-          // Low table / equipment
-          ctx.fillRect(sx + 4, sy + 14, 40, 20);
-          ctx.fillStyle = 'rgba(255,255,255,0.05)';
-          ctx.fillRect(sx + 4, sy + 14, 40, 2);
-          ctx.fillStyle = 'rgba(0,0,0,0.08)';
-          ctx.fillRect(sx + 8, sy + 34, 4, 8);
-          ctx.fillRect(sx + 36, sy + 34, 4, 8);
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 28, 16, 12, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#222222';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 26, 14, 10, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 26, 8, 6, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          // Cable end trailing off
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(sx + 38, sy + 26);
+          ctx.quadraticCurveTo(sx + 44, sy + 34, sx + 46, sy + 40);
+          ctx.stroke();
+        } else if (equipType === 2) {
+          // Apple box (wooden crate used on film sets)
+          ctx.fillStyle = '#8B7355';
+          ctx.fillRect(sx + 8, sy + 18, 32, 22);
+          ctx.fillStyle = '#9B8365';
+          ctx.fillRect(sx + 8, sy + 18, 32, 3);
+          ctx.fillStyle = '#7B6345';
+          ctx.fillRect(sx + 8, sy + 37, 32, 3);
+          // Handle holes
+          ctx.fillStyle = '#5a4a32';
+          ctx.fillRect(sx + 14, sy + 26, 8, 6);
+          ctx.fillRect(sx + 26, sy + 26, 8, 6);
+          // Text
+          ctx.fillStyle = 'rgba(0,0,0,0.2)';
+          ctx.fillRect(sx + 12, sy + 34, 24, 2);
+        } else if (equipType === 3) {
+          // Sandbag
+          ctx.fillStyle = '#6B6040';
+          ctx.beginPath();
+          ctx.moveTo(sx + 8, sy + 38);
+          ctx.lineTo(sx + 12, sy + 22);
+          ctx.lineTo(sx + 36, sy + 22);
+          ctx.lineTo(sx + 40, sy + 38);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#7B7050';
+          ctx.fillRect(sx + 14, sy + 24, 20, 3);
+          // Tie string
+          ctx.strokeStyle = '#554a30';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx + 24, sy + 22);
+          ctx.lineTo(sx + 24, sy + 16);
+          ctx.stroke();
+        } else if (equipType === 4) {
+          // Light reflector / bounce board
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          ctx.beginPath();
+          ctx.ellipse(sx + 24, sy + 42, 10, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Stand
+          ctx.fillStyle = '#555555';
+          ctx.fillRect(sx + 22, sy + 16, 4, 26);
+          // Reflector panel (angled)
+          ctx.fillStyle = '#ccccbb';
+          ctx.save();
+          ctx.translate(sx + 24, sy + 14);
+          ctx.rotate(r2 * 0.5 - 0.25);
+          ctx.fillRect(-16, -10, 32, 20);
+          ctx.fillStyle = '#ddddcc';
+          ctx.fillRect(-14, -8, 28, 16);
+          ctx.restore();
         } else {
-          // Debris / rubble pile
-          ctx.fillRect(sx + 8, sy + 18, 14, 10);
-          ctx.fillRect(sx + 18, sy + 12, 18, 16);
-          ctx.fillRect(sx + 12, sy + 24, 22, 12);
-          ctx.fillStyle = 'rgba(255,255,255,0.04)';
-          ctx.fillRect(sx + 20, sy + 12, 14, 2);
+          // Director's chair
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          ctx.fillRect(sx + 12, sy + 40, 24, 4);
+          // Legs
+          ctx.fillStyle = '#8B7355';
+          ctx.fillRect(sx + 14, sy + 20, 3, 24);
+          ctx.fillRect(sx + 31, sy + 20, 3, 24);
+          // X brace
+          ctx.strokeStyle = '#8B7355';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(sx + 15, sy + 24); ctx.lineTo(sx + 33, sy + 38);
+          ctx.moveTo(sx + 33, sy + 24); ctx.lineTo(sx + 15, sy + 38);
+          ctx.stroke();
+          // Seat
+          ctx.fillStyle = '#1a3a1a';
+          ctx.fillRect(sx + 12, sy + 28, 24, 4);
+          // Back
+          ctx.fillStyle = '#1a3a1a';
+          ctx.fillRect(sx + 12, sy + 16, 24, 6);
+          ctx.fillStyle = '#ffcc00';
+          ctx.font = '4px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('DIRECTOR', sx + 24, sy + 21);
+          ctx.textAlign = 'left';
         }
         break;
       }

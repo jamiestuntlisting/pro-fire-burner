@@ -28,7 +28,7 @@ export const END_REASONS = {
   CLEAN_BURN: { message: 'CLEAN BURN!', icon: '⭐', isGameOver: false, priority: 7 },
   SAFE_OUT: { message: 'SAFE OUT!', icon: '👍', isGameOver: false, priority: 8 },
   EXTINGUISHED: { message: 'EXTINGUISHED!', icon: '❄️', isGameOver: false, priority: 5 },
-  SPLASHDOWN: { message: 'SPLASHDOWN!', icon: '💦', isGameOver: false, priority: 6 },
+  FELL_IN_WATER: { message: 'FELL IN WATER!', icon: '💦', isGameOver: false, priority: 6 },
 };
 
 // Tile types

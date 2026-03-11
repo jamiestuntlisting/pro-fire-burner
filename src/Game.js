@@ -49,7 +49,7 @@ const STATES = {
 const END_ANIMS = {
   BURNED: { duration: 1.5, label: 'BURNED UP!' },
   EXTINGUISHED: { duration: 1.5, label: 'PUT OUT!' },
-  SPLASHDOWN: { duration: 1.5, label: 'SPLASHDOWN!' },
+  FELL_IN_WATER: { duration: 1.5, label: 'FELL IN WATER!' },
   ROADKILL: { duration: 1.2, label: 'ROADKILL!' },
   LOST_THE_SHOT: { duration: 1.2, label: 'LOST THE SHOT!' },
   CLEAN_BURN: { duration: 2.0, label: 'CLEAN BURN!' },
@@ -219,7 +219,7 @@ export class Game {
     this.state = STATES.END_ANIMATION;
 
     // Play sounds immediately
-    if (reason === 'SPLASHDOWN') {
+    if (reason === 'FELL_IN_WATER') {
       this.particles.emitBurst(this.player.getCenterX(), this.player.getCenterY(), 30, {
         r: 100, g: 150, b: 255, life: 1.0, spread: 150,
       });
@@ -237,7 +237,7 @@ export class Game {
     }
 
     // Extinguish player visually for relevant reasons
-    if (reason === 'EXTINGUISHED' || reason === 'SPLASHDOWN' || reason === 'SAFE_OUT') {
+    if (reason === 'EXTINGUISHED' || reason === 'FELL_IN_WATER' || reason === 'SAFE_OUT') {
       this.player.extinguish();
       this.soundManager.playExtinguish();
     }
@@ -320,38 +320,30 @@ export class Game {
   _updateNameEntry(dt) {
     this.input.setGameControlsVisible(false);
 
-    // Sync name from mobile input if active
-    const mobileVal = this.input.getMobileNameValue();
-    if (mobileVal.length > 0) {
-      this.playerName = mobileVal;
-    }
-
-    // Also listen for key presses for name (physical keyboard)
-    for (const [code, pressed] of Object.entries(this.input.keys)) {
-      if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
-        const letter = code.replace('Key', '');
-        if (!this._nameEntryKeys[code]) {
-          this.playerName += letter;
-          // Sync back to mobile input
-          if (this.input._mobileNameInput) {
-            this.input._mobileNameInput.value = this.playerName;
-          }
-        }
-        this._nameEntryKeys[code] = true;
-      } else if (!pressed) {
-        this._nameEntryKeys[code] = false;
-      }
-    }
-    if (this.input.keys['Backspace']) {
-      if (!this._nameBackspaceHeld) {
-        this.playerName = this.playerName.slice(0, -1);
-        this._nameBackspaceHeld = true;
-        if (this.input._mobileNameInput) {
-          this.input._mobileNameInput.value = this.playerName;
-        }
-      }
+    // If mobile input is active, use it as the sole source of truth
+    if (this.input._mobileNameActive) {
+      this.playerName = this.input.getMobileNameValue();
     } else {
-      this._nameBackspaceHeld = false;
+      // Physical keyboard input only
+      for (const [code, pressed] of Object.entries(this.input.keys)) {
+        if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
+          const letter = code.replace('Key', '');
+          if (!this._nameEntryKeys[code]) {
+            this.playerName += letter;
+          }
+          this._nameEntryKeys[code] = true;
+        } else if (!pressed) {
+          this._nameEntryKeys[code] = false;
+        }
+      }
+      if (this.input.keys['Backspace']) {
+        if (!this._nameBackspaceHeld) {
+          this.playerName = this.playerName.slice(0, -1);
+          this._nameBackspaceHeld = true;
+        }
+      } else {
+        this._nameBackspaceHeld = false;
+      }
     }
 
     if (this.input.enterJustPressed && this.playerName.length > 0) {
@@ -445,35 +437,20 @@ export class Game {
     // Lay down mechanic
     if (this.input.actionJustPressed && this.player.isOnFire()) {
       if (this.player.layDown()) {
+        // ALL fire safeties rush to the downed performer
         const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
-        if (safeties.length > 0) {
-          let nearest = null;
-          let nearestDist = Infinity;
-          for (const s of safeties) {
-            const d = distance(this.player.getCenterX(), this.player.getCenterY(), s.getCenterX(), s.getCenterY());
-            if (d < nearestDist) {
-              nearestDist = d;
-              nearest = s;
-            }
-          }
-          if (nearest) {
-            nearest.moveToward(this.player.getCenterX(), this.player.getCenterY());
-          }
+        for (const s of safeties) {
+          s.moveToward(this.player.getCenterX(), this.player.getCenterY());
         }
       }
     }
 
     if (this.player.isLayingDown()) {
-      const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
-      for (const s of safeties) {
-        if (s.arriving) {
-          this.endLevel('SAFE_OUT');
-          return;
-        }
-      }
-      if (this.player.layDownTimer > 3.0) {
-        this.player.fireState = FIRE_STATE.ON_FIRE;
-        this.player.inputLocked = false;
+      // Performer stays down - no getting back up
+      // End level 2 seconds after going down
+      if (this.player.layDownTimer > 2.0) {
+        this.endLevel('SAFE_OUT');
+        return;
       }
     }
 
@@ -491,7 +468,7 @@ export class Game {
     }
 
     if (this.collisionSystem.isOnWater(this.player) && this.player.isOnFire()) {
-      this.endLevel('SPLASHDOWN');
+      this.endLevel('FELL_IN_WATER');
     }
 
     this.entities = this.entities.filter(e => !e.dead);
@@ -684,7 +661,7 @@ export class Game {
         }
         break;
 
-      case 'SPLASHDOWN':
+      case 'FELL_IN_WATER':
         if (t < 0.3 && Math.random() < 0.5) {
           this.particles.emitBurst(px, py, 2, {
             r: 100, g: 150, b: 255, life: 0.6, spread: 60,

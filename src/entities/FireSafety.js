@@ -28,13 +28,13 @@ export class FireSafety extends Entity {
     // AI state machine
     this.aiState = SAFETY_STATE.PATROLLING;
     this.aimTimer = 0;
-    this.aimDelay = 1.2 + Math.random() * 0.8;
+    this.aimDelay = 0.3 + Math.random() * 0.2; // Very fast reaction
     this.sprayTimer = 0;
-    this.sprayDuration = 1.5 + Math.random() * 1.0;
+    this.sprayDuration = 3.0; // 3 second spray burst
     this.cooldownTimer = 0;
     this.cooldownDuration = 2.0 + Math.random() * 1.5;
     this.followDistance = TILE_SIZE * 4;
-    this.followSpeed = PLAYER_SPEED * 0.25;
+    this.followSpeed = PLAYER_SPEED * 0.12; // Very slow movement
 
     // Track player position
     this.playerX = 0;
@@ -42,8 +42,9 @@ export class FireSafety extends Entity {
 
     // Movement toward player (when player lays down)
     this.moveToTarget = null;
-    this.moveSpeed = PLAYER_SPEED * 0.8;
+    this.moveSpeed = PLAYER_SPEED * 0.5; // Moderate rush to downed performer
     this.arriving = false;
+    this.rushSprayDuration = 5.0; // Spray for 5 seconds on downed performer
 
     // Spray particle animation
     this.sprayParticles = [];
@@ -126,7 +127,7 @@ export class FireSafety extends Entity {
       if (p.life <= 0) this.sprayParticles.splice(i, 1);
     }
 
-    // Override AI for lay-down rush
+    // Override AI for lay-down rush (downed performer)
     if (this.moveToTarget) {
       const dx = this.moveToTarget.x - this.getCenterX();
       const dy = this.moveToTarget.y - this.getCenterY();
@@ -135,6 +136,10 @@ export class FireSafety extends Entity {
       if (dist < 16) {
         this.arriving = true;
         this.moveToTarget = null;
+        // Start long 5-second spray on downed performer
+        this.aiState = SAFETY_STATE.SPRAYING;
+        this.sprayTimer = 0;
+        this._currentSprayDuration = this.rushSprayDuration;
       } else {
         const nx = dx / dist;
         const ny = dy / dist;
@@ -149,10 +154,22 @@ export class FireSafety extends Entity {
     // AI state machine
     const distToPlayer = distance(this.getCenterX(), this.getCenterY(), this.playerX, this.playerY);
 
+    // Check if player just ran into spray cone - reactive spray
+    const playerInCone = pointInCone(
+      this.playerX, this.playerY,
+      this.getCenterX(), this.getCenterY(),
+      this.dirX, this.dirY,
+      this.sprayRange, this.sprayHalfAngle
+    );
+
     switch (this.aiState) {
       case SAFETY_STATE.PATROLLING:
         this._aimAtPlayer();
-        if (distToPlayer < TILE_SIZE * 10) {
+        // If player runs in front of the extinguisher, react fast
+        if (playerInCone && distToPlayer < this.sprayRange * 0.9) {
+          this.aiState = SAFETY_STATE.AIMING;
+          this.aimTimer = 0;
+        } else if (distToPlayer < TILE_SIZE * 10) {
           this.aiState = SAFETY_STATE.FOLLOWING;
         }
         break;
@@ -160,7 +177,10 @@ export class FireSafety extends Entity {
       case SAFETY_STATE.FOLLOWING:
         this._aimAtPlayer();
         this._followPlayer(dt);
-        if (distToPlayer < this.sprayRange * 0.8) {
+        if (playerInCone && distToPlayer < this.sprayRange * 0.9) {
+          this.aiState = SAFETY_STATE.AIMING;
+          this.aimTimer = 0;
+        } else if (distToPlayer < this.sprayRange * 0.8) {
           this.aiState = SAFETY_STATE.AIMING;
           this.aimTimer = 0;
         }
@@ -168,13 +188,13 @@ export class FireSafety extends Entity {
 
       case SAFETY_STATE.AIMING:
         this._aimAtPlayer();
-        this._followPlayer(dt);
         this.aimTimer += dt;
         if (this.aimTimer >= this.aimDelay) {
           this.aiState = SAFETY_STATE.SPRAYING;
           this.sprayTimer = 0;
+          this._currentSprayDuration = this.sprayDuration;
         }
-        if (distToPlayer > this.sprayRange) {
+        if (distToPlayer > this.sprayRange * 1.5) {
           this.aiState = SAFETY_STATE.FOLLOWING;
         }
         break;
@@ -183,7 +203,7 @@ export class FireSafety extends Entity {
         this._aimAtPlayer();
         this.sprayTimer += dt;
         this._emitSprayParticles();
-        if (this.sprayTimer >= this.sprayDuration) {
+        if (this.sprayTimer >= (this._currentSprayDuration || this.sprayDuration)) {
           this.aiState = SAFETY_STATE.COOLDOWN;
           this.cooldownTimer = 0;
         }

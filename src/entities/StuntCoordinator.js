@@ -32,18 +32,19 @@ export class StuntCoordinator {
 
   placeNearCamera(filmCamera) {
     if (!filmCamera) return;
-    this.worldX = filmCamera.x + filmCamera.width + 60;
-    this.worldY = filmCamera.y + 8;
+    // 4 tiles to the right of the camera (clearly separate)
+    this.worldX = filmCamera.x + filmCamera.width + 4 * 48;
+    this.worldY = filmCamera.y;
   }
 
   update(dt, playerIsMoving, filmCamera) {
     this.breatheTimer += dt;
     this.headNodTimer += dt;
 
-    // Stand well to the side of the film camera (not on top of it)
+    // Stay 4 tiles to the right of the film camera
     if (filmCamera) {
-      this.worldX = filmCamera.x + filmCamera.width + 60;
-      this.worldY = filmCamera.y + 8;
+      this.worldX = filmCamera.x + filmCamera.width + 4 * 48;
+      this.worldY = filmCamera.y;
     }
 
     if (this.tipTimer > 0) {

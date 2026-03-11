@@ -5,8 +5,33 @@ export class LevelGenerator {
   generate(levelConfig) {
     const { mapWidth, mapHeight } = levelConfig;
     const data = this._generateBaseMap(mapWidth, mapHeight, levelConfig);
-    const spawnPoint = this._findSpawnPoint(data, mapWidth, mapHeight);
-    const entities = this._placeEntities(data, levelConfig, spawnPoint);
+
+    // Place camera first so we can spawn player in its FOV
+    const camCol = randomInt(Math.floor(mapWidth * 0.3), Math.floor(mapWidth * 0.7));
+    const camRow = randomInt(4, Math.max(5, Math.floor(mapHeight * 0.25)));
+    // Clear area around camera and stunt coordinator
+    for (let r = camRow - 1; r <= camRow + 1; r++) {
+      for (let c = camCol - 2; c <= camCol + 6; c++) {
+        if (r > 0 && r < mapHeight - 1 && c > 0 && c < mapWidth - 1) {
+          data[r][c] = TILE_FLOOR;
+        }
+      }
+    }
+
+    // Spawn player below the camera (within FOV, which points downward)
+    const spawnCol = camCol;
+    const spawnRow = Math.min(camRow + 8, mapHeight - 4);
+    // Clear spawn area
+    for (let r = spawnRow - 3; r <= spawnRow + 3; r++) {
+      for (let c = spawnCol - 3; c <= spawnCol + 3; c++) {
+        if (r > 0 && r < mapHeight - 1 && c > 0 && c < mapWidth - 1) {
+          data[r][c] = TILE_FLOOR;
+        }
+      }
+    }
+    const spawnPoint = { x: spawnCol * TILE_SIZE, y: spawnRow * TILE_SIZE };
+
+    const entities = this._placeEntities(data, levelConfig, spawnPoint, { col: camCol, row: camRow });
 
     return { data, spawnPoint, entities };
   }
@@ -74,28 +99,10 @@ export class LevelGenerator {
     }
 
     // Ensure spawn area is clear (center-ish)
-    const spawnX = Math.floor(width / 2);
-    const spawnY = Math.floor(height / 2);
-    for (let row = spawnY - 3; row <= spawnY + 3; row++) {
-      for (let col = spawnX - 3; col <= spawnX + 3; col++) {
-        if (row > 0 && row < height - 1 && col > 0 && col < width - 1) {
-          data[row][col] = TILE_FLOOR;
-        }
-      }
-    }
-
     return data;
   }
 
-  _findSpawnPoint(data, width, height) {
-    // Spawn in center
-    return {
-      x: Math.floor(width / 2) * TILE_SIZE,
-      y: Math.floor(height / 2) * TILE_SIZE,
-    };
-  }
-
-  _placeEntities(data, config, spawnPoint) {
+  _placeEntities(data, config, spawnPoint, camPos) {
     const entities = {
       fireSafeties: [],
       gelPickups: [],
@@ -124,11 +131,7 @@ export class LevelGenerator {
       }
     };
 
-    // Film camera (always one)
-    const camPos = {
-      col: randomInt(3, data[0].length - 4),
-      row: 2,
-    };
+    // Film camera (position passed in from generate())
     entities.filmCameras.push(camPos);
 
     // Place entities with safety rules
