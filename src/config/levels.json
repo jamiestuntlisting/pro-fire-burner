@@ -7,7 +7,7 @@
     "costumeDescription": "Boardshorts and a flame-retardant rash guard",
     "mapWidth": 18,
     "mapHeight": 18,
-    "numFireSafeties": 2,
+    "numFireSafeties": 1,
     "numGelPickups": 10,
     "numFuelPickups": 8,
     "hasWaterFeatures": true,

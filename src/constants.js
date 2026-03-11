@@ -16,7 +16,7 @@ export const TORCH_EFFECT_RADIUS = 2.0;
 export const TORCH_DRAIN_MULTIPLIER = 1.5;
 export const PROPANE_DRAIN_AMOUNT = 15;
 export const JOYSTICK_DEADZONE = 0.15;
-export const CAMERA_LERP_SPEED = 0.08;
+export const CAMERA_LERP_SPEED = 0.15;
 export const TICK_RATE = 1 / 60;
 
 // End state reasons

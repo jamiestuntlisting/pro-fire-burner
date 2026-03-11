@@ -59,6 +59,7 @@ export class Camera {
     if (this.mode !== CAMERA_MODE.FOLLOW) return;
     this.targetX = entity.getCenterX() - VIEWPORT_WIDTH / (2 * this.zoom);
     this.targetY = entity.getCenterY() - VIEWPORT_HEIGHT / (2 * this.zoom);
+    this._lastFollowEntity = entity;
   }
 
   update(dt) {
@@ -80,6 +81,21 @@ export class Camera {
       if (this.y < 0) this.y = 0;
       if (this.x + vw > this.mapWidth) this.x = Math.max(0, this.mapWidth - vw);
       if (this.y + vh > this.mapHeight) this.y = Math.max(0, this.mapHeight - vh);
+    }
+
+    // Hard clamp: ensure followed entity never leaves the screen
+    if (this._lastFollowEntity && this.mode === CAMERA_MODE.FOLLOW) {
+      const ent = this._lastFollowEntity;
+      const ex = ent.getCenterX();
+      const ey = ent.getCenterY();
+      const vw = VIEWPORT_WIDTH / this.zoom;
+      const vh = VIEWPORT_HEIGHT / this.zoom;
+      const margin = 32 / this.zoom; // pixel margin from screen edge
+
+      if (ex < this.x + margin) this.x = ex - margin;
+      if (ex > this.x + vw - margin) this.x = ex - vw + margin;
+      if (ey < this.y + margin) this.y = ey - margin;
+      if (ey > this.y + vh - margin) this.y = ey - vh + margin;
     }
 
     // Zoom lerp

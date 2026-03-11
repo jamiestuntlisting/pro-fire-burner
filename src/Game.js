@@ -177,8 +177,8 @@ export class Game {
     this.camera.setMapBounds(this.tileMap.widthPx, this.tileMap.heightPx);
     this.camera.x = this.player.getCenterX() - VIEWPORT_WIDTH / 2;
     this.camera.y = this.player.getCenterY() - VIEWPORT_HEIGHT / 2;
-    this.camera.targetZoom = 1.0;
-    this.camera.zoom = 1.0;
+    this.camera.targetZoom = 0.8;
+    this.camera.zoom = 0.8;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
     // Set camera mode
@@ -376,8 +376,8 @@ export class Game {
       });
       this.soundManager.playIgnition();
 
-      this.camera.zoomTo(1.05);
-      setTimeout(() => this.camera.zoomTo(1.0), 300);
+      this.camera.zoomTo(0.85);
+      setTimeout(() => this.camera.zoomTo(0.8), 300);
     }
     this.camera.follow(this.player);
     this.camera.update(dt);
@@ -698,7 +698,7 @@ export class Game {
             1, { r: 255, g: 255, b: 100, life: 0.8, spread: 45 }
           );
         }
-        if (t < 0.5) this.camera.zoomTo(0.95);
+        if (t < 0.5) this.camera.zoomTo(0.75);
         break;
 
       case 'SAFE_OUT':
