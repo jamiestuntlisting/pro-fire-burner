@@ -28,6 +28,7 @@ import { Torch } from './entities/Torch.js';
 import { PropaneCannon } from './entities/PropaneCannon.js';
 import { PASwarm } from './entities/PASwarm.js';
 import { StuntCoordinator } from './entities/StuntCoordinator.js';
+import { Producer } from './entities/Producer.js';
 import { CountdownTimer } from './utils/timer.js';
 import { distance } from './utils/math.js';
 
@@ -60,6 +61,10 @@ const END_ANIMS = {
 const SURVIVE_TIME = 15;
 // How many fire safeties spawn for the chase phase
 const CHASE_SAFETY_COUNT = 4;
+// Overtime thresholds (seconds after survive time)
+const OVERTIME_1_5X_TIME = SURVIVE_TIME;       // 1.5x starts when survive timer ends
+const OVERTIME_2X_TIME = SURVIVE_TIME + 15;     // 2x starts 15s after overtime begins
+const PRODUCER_COUNT = 3;
 
 export class Game {
   constructor() {
@@ -115,6 +120,10 @@ export class Game {
     // Survive countdown timer
     this.surviveTimer = 0;
     this.chaseStarted = false;
+
+    // Overtime system
+    this.overtimeLevel = 0; // 0 = normal, 1 = 1.5x, 2 = 2x
+    this.producersSpawned = false;
   }
 
   async init() {
@@ -199,6 +208,8 @@ export class Game {
     // Reset survive/chase state
     this.surviveTimer = 0;
     this.chaseStarted = false;
+    this.overtimeLevel = 0;
+    this.producersSpawned = false;
   }
 
   endLevel(reason) {
@@ -411,6 +422,8 @@ export class Game {
       if (entity instanceof FireSafety) {
         entity.setPlayerPosition(px, py);
         entity.update(dt);
+      } else if (entity instanceof Producer) {
+        entity.update(dt, this.tileMap, px, py);
       } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
       } else {
@@ -430,12 +443,25 @@ export class Game {
       }
     }
 
-    // Survive countdown - after SURVIVE_TIME seconds, 4 fire safeties start chasing
+    // Survive countdown and overtime escalation
     if (this.player.isOnFire()) {
       this.surviveTimer += dt;
       if (!this.chaseStarted && this.surviveTimer >= SURVIVE_TIME) {
         this.chaseStarted = true;
         this._spawnChaseSafeties();
+      }
+
+      // Overtime escalation
+      if (this.surviveTimer >= OVERTIME_2X_TIME && this.overtimeLevel < 2) {
+        this.overtimeLevel = 2;
+        this.player.drainMultiplier = Math.max(this.player.drainMultiplier, 2.0);
+        if (!this.producersSpawned) {
+          this.producersSpawned = true;
+          this._spawnProducers();
+        }
+      } else if (this.surviveTimer >= OVERTIME_1_5X_TIME && this.overtimeLevel < 1) {
+        this.overtimeLevel = 1;
+        this.player.drainMultiplier = Math.max(this.player.drainMultiplier, 1.5);
       }
     }
 
@@ -445,6 +471,9 @@ export class Game {
 
     // Pickup collection - always active, not just when on fire
     this._checkPickupCollection();
+
+    // Producer collision - they block the player
+    this._checkProducerCollisions();
 
     // Lay down mechanic
     if (this.input.actionJustPressed && this.player.isOnFire()) {
@@ -533,6 +562,38 @@ export class Game {
           this.soundManager.playFuelPickup();
         }
         entity.collect();
+      }
+    }
+  }
+
+  _spawnProducers() {
+    const px = this.player.x;
+    const py = this.player.y;
+    for (let i = 0; i < PRODUCER_COUNT; i++) {
+      const angle = (i / PRODUCER_COUNT) * Math.PI * 2;
+      const spawnDist = TILE_SIZE * 6;
+      let sx = px + Math.cos(angle) * spawnDist;
+      let sy = py + Math.sin(angle) * spawnDist;
+      sx = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.widthPx - TILE_SIZE * 3, sx));
+      sy = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.heightPx - TILE_SIZE * 3, sy));
+      const producer = new Producer(sx, sy);
+      producer.setPlayerTarget(px, py);
+      this.entities.push(producer);
+    }
+    this.camera.shake(3, 0.4);
+  }
+
+  _checkProducerCollisions() {
+    for (const entity of this.entities) {
+      if (entity.dead || !(entity instanceof Producer)) continue;
+      if (this.collisionSystem.entitiesOverlap(this.player, entity)) {
+        // Push player away from producer
+        const dx = this.player.getCenterX() - entity.getCenterX();
+        const dy = this.player.getCenterY() - entity.getCenterY();
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const pushForce = 3;
+        this.player.x += (dx / dist) * pushForce;
+        this.player.y += (dy / dist) * pushForce;
       }
     }
   }
@@ -630,7 +691,8 @@ export class Game {
       }
     }
 
-    let maxDrainMult = 1.0;
+    // Base drain from overtime level
+    let maxDrainMult = this.overtimeLevel >= 2 ? 2.0 : this.overtimeLevel >= 1 ? 1.5 : 1.0;
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof Torch)) continue;
       if (entity.isPlayerNearby(px, py)) {
@@ -827,6 +889,7 @@ export class Game {
         this._renderLevel(ctx);
         this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
         this._renderSurviveTimer(ctx);
+        this._renderOvertimeUI(ctx);
         this.stuntCoordinator.render(ctx, this.camera);
         break;
       case STATES.END_ANIMATION:
@@ -898,6 +961,43 @@ export class Game {
       ctx.fillText(`SURVIVE: ${remaining}s`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
     }
 
+    ctx.restore();
+  }
+
+  _renderOvertimeUI(ctx) {
+    if (this.overtimeLevel <= 0) return;
+    if (!this.player || !this.player.isOnFire()) return;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+
+    const flash = Math.sin(this.surviveTimer * 6) > 0;
+    const multiplierText = this.overtimeLevel >= 2 ? '2x' : '1.5x';
+
+    // Overtime banner at top
+    const bannerAlpha = 0.7 + Math.sin(this.surviveTimer * 4) * 0.3;
+    ctx.globalAlpha = bannerAlpha;
+
+    if (this.overtimeLevel >= 2) {
+      ctx.fillStyle = flash ? '#ff2222' : '#cc0000';
+    } else {
+      ctx.fillStyle = flash ? '#ffaa00' : '#dd8800';
+    }
+
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(`OVERTIME ${multiplierText}`, VIEWPORT_WIDTH / 2, 30);
+
+    // Sub-text
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '12px monospace';
+    if (this.overtimeLevel >= 2) {
+      ctx.fillText('PRODUCERS ON SET!', VIEWPORT_WIDTH / 2, 48);
+    } else {
+      ctx.fillText('RESOURCES DRAINING FASTER', VIEWPORT_WIDTH / 2, 48);
+    }
+
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
