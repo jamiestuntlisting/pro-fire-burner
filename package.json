@@ -1,0 +1,14 @@
+{
+  "name": "fire-burn-simulator",
+  "version": "1.0.0",
+  "description": "Top-down action/survival arcade game — Stay on fire and stay safe!",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  },
+  "dependencies": {
+    "tone": "^14.7.77"
+  },
+  "devDependencies": {}
+}
