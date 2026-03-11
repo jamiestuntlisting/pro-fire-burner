@@ -857,17 +857,25 @@ export class Game {
     ctx.font = '14px monospace';
     ctx.fillText('This will appear on the high score board', cx, 180);
 
-    // Name display box
-    ctx.fillStyle = '#1a1a2a';
-    ctx.fillRect(cx - 140, 220, 280, 48);
-    ctx.strokeStyle = '#ff6600';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cx - 140, 220, 280, 48);
+    // On mobile, the HTML input handles display; on desktop, draw the canvas box
+    if (!this.input._mobileNameActive) {
+      // Canvas name display box (desktop)
+      ctx.fillStyle = '#1a1a2a';
+      ctx.fillRect(cx - 140, 220, 280, 48);
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - 140, 220, 280, 48);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px monospace';
-    const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
-    ctx.fillText(this.playerName + cursor, cx, 252);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px monospace';
+      const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
+      ctx.fillText(this.playerName + cursor, cx, 252);
+    } else {
+      // Mobile - just show the typed name larger on canvas (input is at bottom)
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = 'bold 28px monospace';
+      ctx.fillText(this.playerName, cx, 250);
+    }
 
     // Hint
     if (this.playerName.length > 0) {
@@ -875,13 +883,13 @@ export class Game {
       if (blink) {
         ctx.fillStyle = '#44ff44';
         ctx.font = '14px monospace';
-        const hintText = this.input.isTouchDevice ? 'TAP HERE TO START' : 'PRESS ENTER TO START';
+        const hintText = this.input._mobileNameActive ? 'TAP SCREEN TO START' : 'PRESS ENTER TO START';
         ctx.fillText(hintText, cx, 310);
       }
     } else {
       ctx.fillStyle = '#aa7744';
       ctx.font = '14px monospace';
-      ctx.fillText('TAP THE INPUT BELOW TO TYPE YOUR NAME', cx, 310);
+      ctx.fillText(this.input._mobileNameActive ? 'TYPE YOUR NAME BELOW' : 'TYPE YOUR NAME', cx, 310);
     }
 
     ctx.textAlign = 'left';
