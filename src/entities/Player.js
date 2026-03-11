@@ -38,6 +38,7 @@ export class Player extends Entity {
     this.animTimer = 0;
     this.animFrame = 0;
     this.isMoving = false;
+    this.breatheTimer = 0;
 
     // Flare effect (on fuel pickup)
     this.flareTimer = 0;
@@ -111,6 +112,7 @@ export class Player extends Entity {
   update(dt, input, collisionSystem) {
     // Animation
     this.animTimer += dt;
+    this.breatheTimer += dt;
     if (this.animTimer > 0.15) {
       this.animTimer -= 0.15;
       this.animFrame = (this.animFrame + 1) % 4;
@@ -147,12 +149,13 @@ export class Player extends Entity {
       }
     }
 
-    // Fire depletion
+    // Fire depletion - burns 2x faster when standing still
     if (this.fireState === FIRE_STATE.ON_FIRE) {
       this.secondsOnFire += dt;
       this.totalTime += dt;
 
-      const multiplier = this.drainMultiplier;
+      const stillnessPenalty = this.isMoving ? 0.7 : 2.0;
+      const multiplier = this.drainMultiplier * stillnessPenalty;
       this.gel -= this.gelRate * multiplier * dt;
       this.fuel -= this.fuelRate * multiplier * dt;
 
@@ -182,56 +185,125 @@ export class Player extends Entity {
     const sy = Math.floor(screen.y);
 
     if (this.fireState === FIRE_STATE.LAYING_DOWN) {
-      // Face-down sprite (wider, shorter)
-      ctx.fillStyle = this.costumeColor1;
-      ctx.fillRect(sx, sy + 4, this.width, 8);
-      ctx.fillStyle = this.costumeColor2;
-      ctx.fillRect(sx + 2, sy + 5, 4, 6); // head
+      this._renderLayingDown(ctx, sx, sy);
       return;
     }
 
-    // Body
-    ctx.fillStyle = this.costumeColor1;
-    ctx.fillRect(sx + 2, sy + 4, 10, 10);
+    this._renderStanding(ctx, sx, sy);
+  }
 
-    // Head
-    ctx.fillStyle = this.costumeColor2;
-    ctx.fillRect(sx + 4, sy, 6, 6);
+  _renderLayingDown(ctx, sx, sy) {
+    ctx.save();
+    // Prone body
+    const grad = ctx.createLinearGradient(sx, sy + 4, sx + this.width, sy + 12);
+    grad.addColorStop(0, this.costumeColor1);
+    grad.addColorStop(1, this._darkenColor(this.costumeColor1, 0.7));
+    ctx.fillStyle = grad;
+    this._roundRect(ctx, sx, sy + 4, this.width, 8, 2);
 
-    // Direction indicator (eyes/face)
-    ctx.fillStyle = '#000';
-    if (this.facingY < -0.3) {
-      // Up
-      ctx.fillRect(sx + 5, sy + 1, 1, 1);
-      ctx.fillRect(sx + 8, sy + 1, 1, 1);
-    } else if (this.facingY > 0.3) {
-      // Down
-      ctx.fillRect(sx + 5, sy + 3, 1, 1);
-      ctx.fillRect(sx + 8, sy + 3, 1, 1);
-    } else if (this.facingX < 0) {
-      // Left
-      ctx.fillRect(sx + 4, sy + 2, 1, 1);
-      ctx.fillRect(sx + 4, sy + 4, 1, 1);
-    } else {
-      // Right
-      ctx.fillRect(sx + 9, sy + 2, 1, 1);
-      ctx.fillRect(sx + 9, sy + 4, 1, 1);
-    }
+    // Head on ground
+    ctx.fillStyle = '#f0c896';
+    this._roundRect(ctx, sx + 2, sy + 5, 5, 5, 2);
 
-    // Walk animation (leg movement)
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 7, sy + 13, 7, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _renderStanding(ctx, sx, sy) {
+    ctx.save();
+    const breathe = Math.sin(this.breatheTimer * 2) * 0.5;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 7, sy + 14, 5, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs with walk animation
+    ctx.fillStyle = this._darkenColor(this.costumeColor1, 0.6);
     if (this.isMoving) {
-      ctx.fillStyle = this.costumeColor1;
-      const legOffset = this.animFrame < 2 ? 1 : -1;
-      ctx.fillRect(sx + 3, sy + 12, 3, 2);
-      ctx.fillRect(sx + 8 + legOffset, sy + 12, 3, 2);
+      const legSwing = Math.sin(this.animTimer * 40) * 2;
+      this._roundRect(ctx, sx + 3, sy + 11 + legSwing * 0.3, 3, 3, 1);
+      this._roundRect(ctx, sx + 8, sy + 11 - legSwing * 0.3, 3, 3, 1);
     } else {
-      ctx.fillStyle = this.costumeColor1;
-      ctx.fillRect(sx + 3, sy + 12, 3, 2);
-      ctx.fillRect(sx + 8, sy + 12, 3, 2);
+      this._roundRect(ctx, sx + 3, sy + 11, 3, 3, 1);
+      this._roundRect(ctx, sx + 8, sy + 11, 3, 3, 1);
     }
 
-    // Costume accent
+    // Body with gradient
+    const bodyGrad = ctx.createLinearGradient(sx + 2, sy + 4, sx + 12, sy + 12);
+    bodyGrad.addColorStop(0, this.costumeColor1);
+    bodyGrad.addColorStop(1, this._darkenColor(this.costumeColor1, 0.75));
+    ctx.fillStyle = bodyGrad;
+    this._roundRect(ctx, sx + 2, sy + 4 + breathe, 10, 8, 2);
+
+    // Costume accent stripe
     ctx.fillStyle = this.costumeAccent;
-    ctx.fillRect(sx + 3, sy + 4, 8, 1);
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(sx + 3, sy + 5 + breathe, 8, 1);
+    ctx.globalAlpha = 1;
+
+    // Arms
+    ctx.fillStyle = this.costumeColor1;
+    if (this.isMoving) {
+      const armSwing = Math.sin(this.animTimer * 40) * 1.5;
+      ctx.fillRect(sx + 1, sy + 5 + breathe - armSwing * 0.3, 2, 5);
+      ctx.fillRect(sx + 11, sy + 5 + breathe + armSwing * 0.3, 2, 5);
+    } else {
+      ctx.fillRect(sx + 1, sy + 5 + breathe, 2, 5);
+      ctx.fillRect(sx + 11, sy + 5 + breathe, 2, 5);
+    }
+
+    // Head with skin gradient
+    const headGrad = ctx.createRadialGradient(sx + 7, sy + 2, 0, sx + 7, sy + 2, 4);
+    headGrad.addColorStop(0, '#f5d4a8');
+    headGrad.addColorStop(1, '#e0b888');
+    ctx.fillStyle = headGrad;
+    this._roundRect(ctx, sx + 4, sy - 1, 6, 6, 2);
+
+    // Eyes
+    ctx.fillStyle = '#222';
+    if (this.facingY < -0.3) {
+      ctx.fillRect(sx + 5, sy, 1, 2);
+      ctx.fillRect(sx + 8, sy, 1, 2);
+    } else if (this.facingY > 0.3) {
+      ctx.fillRect(sx + 5, sy + 3, 1, 2);
+      ctx.fillRect(sx + 8, sy + 3, 1, 2);
+    } else if (this.facingX < 0) {
+      ctx.fillRect(sx + 4, sy + 1, 1, 2);
+      ctx.fillRect(sx + 4, sy + 3, 1, 1);
+    } else {
+      ctx.fillRect(sx + 9, sy + 1, 1, 2);
+      ctx.fillRect(sx + 9, sy + 3, 1, 1);
+    }
+
+    // Hair
+    ctx.fillStyle = '#553311';
+    ctx.fillRect(sx + 4, sy - 2, 6, 2);
+
+    ctx.restore();
+  }
+
+  _roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  _darkenColor(hex, factor) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgb(${Math.floor(r * factor)},${Math.floor(g * factor)},${Math.floor(b * factor)})`;
   }
 }

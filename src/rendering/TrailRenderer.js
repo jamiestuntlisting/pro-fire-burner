@@ -20,7 +20,7 @@ function createTrailParticle() {
 
 export class TrailRenderer {
   constructor() {
-    this.pool = new ObjectPool(createTrailParticle, 300);
+    this.pool = new ObjectPool(createTrailParticle, 500);
     this.emitTimer = 0;
     this.lastX = 0;
     this.lastY = 0;
@@ -35,26 +35,26 @@ export class TrailRenderer {
     }
 
     this.emitTimer += dt;
-    const emitRate = 0.05 / Math.max(0.3, intensity);
+    const emitRate = 0.03 / Math.max(0.3, intensity);
 
     while (this.emitTimer >= emitRate) {
       this.emitTimer -= emitRate;
       const p = this.pool.acquire();
-      p.x = playerX + randomRange(0, 12);
-      p.y = playerY + randomRange(8, 14);
-      p.vx = randomRange(-3, 3);
-      p.vy = randomRange(-8, -3);
+      p.x = playerX + randomRange(0, 14);
+      p.y = playerY + randomRange(8, 16);
+      p.vx = randomRange(-5, 5);
+      p.vy = randomRange(-12, -4);
       p.life = FIRE_TRAIL_LIFETIME * randomRange(0.5, 1.0);
       p.maxLife = p.life;
-      p.size = Math.ceil(randomRange(1, 2));
+      p.size = Math.ceil(randomRange(2, 4));
 
       const colorT = Math.random();
-      if (colorT < 0.4) {
-        p.r = 255; p.g = 100; p.b = 0;
-      } else if (colorT < 0.7) {
-        p.r = 200; p.g = 50; p.b = 0;
+      if (colorT < 0.3) {
+        p.r = 255; p.g = 120; p.b = 0;
+      } else if (colorT < 0.6) {
+        p.r = 220; p.g = 60; p.b = 0;
       } else {
-        p.r = 150; p.g = 30; p.b = 0;
+        p.r = 160; p.g = 30; p.b = 0;
       }
       p.dead = false;
     }
@@ -65,15 +65,30 @@ export class TrailRenderer {
   }
 
   render(ctx, camera) {
+    ctx.save();
     for (const p of this.pool.active) {
       if (p.dead) continue;
       const screen = camera.worldToScreen(p.x, p.y);
-      const alpha = Math.max(0, (p.life / p.maxLife) * 0.7);
+      const lifeRatio = p.life / p.maxLife;
+      const alpha = Math.max(0, lifeRatio * 0.6);
+      const sz = p.size * (0.3 + lifeRatio * 0.7);
+
+      // Glow
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.fillStyle = `rgb(${p.r},${Math.min(255, p.g + 30)},${p.b})`;
+      ctx.beginPath();
+      ctx.arc(Math.floor(screen.x), Math.floor(screen.y), sz * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core
       ctx.globalAlpha = alpha;
       ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
-      ctx.fillRect(Math.floor(screen.x), Math.floor(screen.y), p.size, p.size);
+      ctx.beginPath();
+      ctx.arc(Math.floor(screen.x), Math.floor(screen.y), sz * 0.6, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   clear() {

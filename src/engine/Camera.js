@@ -1,6 +1,11 @@
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, CAMERA_LERP_SPEED } from '../constants.js';
 import { lerp } from '../utils/math.js';
 
+export const CAMERA_MODE = {
+  FOLLOW: 'FOLLOW',
+  STATIC_PAN: 'STATIC_PAN',
+};
+
 export class Camera {
   constructor() {
     this.x = 0;
@@ -20,6 +25,15 @@ export class Camera {
     // Map bounds
     this.mapWidth = 0;
     this.mapHeight = 0;
+
+    // Camera mode
+    this.mode = CAMERA_MODE.FOLLOW;
+    this.panTimer = 0;
+    this.panSpeed = 0.3;
+    this.panRangeX = 0;
+    this.panRangeY = 0;
+    this.panCenterX = 0;
+    this.panCenterY = 0;
   }
 
   setMapBounds(widthPx, heightPx) {
@@ -27,12 +41,34 @@ export class Camera {
     this.mapHeight = heightPx;
   }
 
+  setStaticPan(centerX, centerY, rangeX, rangeY, speed) {
+    this.mode = CAMERA_MODE.STATIC_PAN;
+    this.panCenterX = centerX - VIEWPORT_WIDTH / (2 * this.zoom);
+    this.panCenterY = centerY - VIEWPORT_HEIGHT / (2 * this.zoom);
+    this.panRangeX = rangeX;
+    this.panRangeY = rangeY;
+    this.panSpeed = speed || 0.3;
+    this.panTimer = 0;
+  }
+
+  setFollowMode() {
+    this.mode = CAMERA_MODE.FOLLOW;
+  }
+
   follow(entity) {
+    if (this.mode !== CAMERA_MODE.FOLLOW) return;
     this.targetX = entity.getCenterX() - VIEWPORT_WIDTH / (2 * this.zoom);
     this.targetY = entity.getCenterY() - VIEWPORT_HEIGHT / (2 * this.zoom);
   }
 
   update(dt) {
+    if (this.mode === CAMERA_MODE.STATIC_PAN) {
+      this.panTimer += dt * this.panSpeed;
+      // Smooth back-and-forth pan using sine wave
+      this.targetX = this.panCenterX + Math.sin(this.panTimer) * this.panRangeX;
+      this.targetY = this.panCenterY + Math.sin(this.panTimer * 0.7) * this.panRangeY;
+    }
+
     this.x = lerp(this.x, this.targetX, CAMERA_LERP_SPEED);
     this.y = lerp(this.y, this.targetY, CAMERA_LERP_SPEED);
 
@@ -70,7 +106,6 @@ export class Camera {
 
   zoomTo(level, duration) {
     this.targetZoom = level;
-    // Zoom lerps automatically in update
   }
 
   worldToScreen(worldX, worldY) {

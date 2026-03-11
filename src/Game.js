@@ -3,7 +3,7 @@ import { TICK_RATE, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE,
   TORCH_DRAIN_MULTIPLIER, END_REASONS } from './constants.js';
 import { Canvas } from './engine/Canvas.js';
 import { InputManager } from './engine/InputManager.js';
-import { Camera } from './engine/Camera.js';
+import { Camera, CAMERA_MODE } from './engine/Camera.js';
 import { SpatialHash } from './engine/SpatialHash.js';
 import { CollisionSystem } from './engine/CollisionSystem.js';
 import { SoundManager } from './engine/SoundManager.js';
@@ -27,6 +27,7 @@ import { FilmCamera } from './entities/FilmCamera.js';
 import { Torch } from './entities/Torch.js';
 import { PropaneCannon } from './entities/PropaneCannon.js';
 import { PASwarm } from './entities/PASwarm.js';
+import { StuntCoordinator } from './entities/StuntCoordinator.js';
 import { CountdownTimer } from './utils/timer.js';
 import { distance } from './utils/math.js';
 import { addHighScore } from './utils/storage.js';
@@ -67,6 +68,9 @@ export class Game {
     this.countdown = new Countdown();
     this.gameOverScreen = new GameOverScreen();
     this.highScoreBoard = new HighScoreBoard();
+
+    // Stunt coordinator (always present during gameplay)
+    this.stuntCoordinator = new StuntCoordinator();
 
     // Game state
     this.state = STATES.MENU;
@@ -159,6 +163,16 @@ export class Game {
     this.camera.zoom = 1.0;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
 
+    // Set camera mode based on level config
+    if (this.levelConfig.cameraMode === 'STATIC_PAN') {
+      const mapCenterX = (this.levelConfig.mapWidth * TILE_SIZE) / 2;
+      const mapCenterY = (this.levelConfig.mapHeight * TILE_SIZE) / 2;
+      const panRange = Math.min(this.levelConfig.mapWidth, this.levelConfig.mapHeight) * TILE_SIZE * 0.15;
+      this.camera.setStaticPan(mapCenterX, mapCenterY, panRange, panRange * 0.5, 0.25);
+    } else {
+      this.camera.setFollowMode();
+    }
+
     this.fireRenderer.clear();
     this.trailRenderer.clear();
     this.particles.clear();
@@ -172,6 +186,9 @@ export class Game {
     } else {
       this.levelTimer = null;
     }
+
+    // Reset stunt coordinator
+    this.stuntCoordinator = new StuntCoordinator();
   }
 
   endLevel(reason) {
@@ -326,11 +343,17 @@ export class Game {
     // Rebuild spatial hash
     this.spatialHash.rebuild(this.entities);
 
-    // Update entities
+    // Update entities and tell fire safeties where the player is
+    const px = this.player.getCenterX();
+    const py = this.player.getCenterY();
+
     for (const entity of this.entities) {
       if (entity.dead) continue;
 
-      if (entity instanceof Extra || entity instanceof Principal) {
+      if (entity instanceof FireSafety) {
+        entity.setPlayerPosition(px, py);
+        entity.update(dt);
+      } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
       } else if (entity instanceof FilmCamera) {
         entity.update(dt);
@@ -401,6 +424,9 @@ export class Game {
     this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
     this.trailRenderer.update(dt, this.player.x, this.player.y, this.player.isMoving, intensity);
     this.particles.update(dt);
+
+    // Update stunt coordinator
+    this.stuntCoordinator.update(dt, this.player.isMoving);
 
     // Check end conditions
     if (this.player.gel <= 0) {
@@ -609,6 +635,8 @@ export class Game {
       case STATES.PLAYING:
         this._renderLevel(ctx);
         this.hud.render(ctx, this.player, this.levelConfig, this.filmCamera, this.levelTimer);
+        // Stunt coordinator overlay (screen-space)
+        this.stuntCoordinator.render(ctx);
         break;
       case STATES.PA_ATTACK:
         this._renderLevel(ctx);

@@ -23,14 +23,17 @@ export class Extra extends Entity {
     // Animation
     this.animTimer = 0;
     this.animFrame = 0;
+    this.breatheTimer = Math.random() * Math.PI * 2;
 
     // Color variation
     this.shirtColor = ['#4488cc', '#cc4488', '#44cc88', '#cccc44', '#8844cc'][randomInt(0, 4)];
     this.pantsColor = ['#334455', '#443322', '#224433', '#333333'][randomInt(0, 3)];
+    this.hairColor = ['#553311', '#222222', '#886633', '#aa6622'][randomInt(0, 3)];
   }
 
   update(dt, tileMap) {
     this.animTimer += dt;
+    this.breatheTimer += dt;
     if (this.animTimer > 0.2) {
       this.animTimer -= 0.2;
       this.animFrame = (this.animFrame + 1) % 4;
@@ -112,26 +115,96 @@ export class Extra extends Entity {
 
     if (this.state === 'FALLEN') return;
 
-    // Body
-    ctx.fillStyle = this.shirtColor;
-    ctx.fillRect(sx + 1, sy + 4, 10, 7);
+    ctx.save();
 
-    // Head
-    ctx.fillStyle = '#eebb88';
-    ctx.fillRect(sx + 3, sy, 6, 5);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 6, sy + 12, 4, 1.5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     // Legs
     ctx.fillStyle = this.pantsColor;
-    ctx.fillRect(sx + 2, sy + 10, 3, 2);
-    ctx.fillRect(sx + 7, sy + 10, 3, 2);
+    if (this.state === 'WALKING') {
+      const legSwing = Math.sin(this.animTimer * 30) * 1.5;
+      this._roundRect(ctx, sx + 2, sy + 9 + legSwing * 0.3, 3, 3, 1);
+      this._roundRect(ctx, sx + 7, sy + 9 - legSwing * 0.3, 3, 3, 1);
+    } else {
+      this._roundRect(ctx, sx + 2, sy + 9, 3, 3, 1);
+      this._roundRect(ctx, sx + 7, sy + 9, 3, 3, 1);
+    }
 
-    // On fire effect (jittering)
+    // Body
+    const bodyGrad = ctx.createLinearGradient(sx + 1, sy + 4, sx + 11, sy + 10);
+    bodyGrad.addColorStop(0, this.shirtColor);
+    bodyGrad.addColorStop(1, this._darkenColor(this.shirtColor, 0.7));
+    ctx.fillStyle = bodyGrad;
+    this._roundRect(ctx, sx + 1, sy + 4, 10, 6, 2);
+
+    // Arms
+    ctx.fillStyle = this.shirtColor;
+    ctx.fillRect(sx, sy + 5, 2, 4);
+    ctx.fillRect(sx + 10, sy + 5, 2, 4);
+
+    // Head
+    const headGrad = ctx.createRadialGradient(sx + 6, sy + 2, 0, sx + 6, sy + 2, 3);
+    headGrad.addColorStop(0, '#f5d4a8');
+    headGrad.addColorStop(1, '#e0b888');
+    ctx.fillStyle = headGrad;
+    this._roundRect(ctx, sx + 3, sy, 6, 5, 2);
+
+    // Hair
+    ctx.fillStyle = this.hairColor;
+    ctx.fillRect(sx + 3, sy - 1, 6, 2);
+
+    // Eyes
+    ctx.fillStyle = '#222';
+    ctx.fillRect(sx + 4, sy + 2, 1, 1);
+    ctx.fillRect(sx + 7, sy + 2, 1, 1);
+
+    // On fire effect
     if (this.state === 'ON_FIRE') {
       const jitter = Math.sin(this.animTimer * 30) * 2;
+      // Fire glow
+      ctx.fillStyle = 'rgba(255,100,0,0.3)';
+      ctx.beginPath();
+      ctx.arc(sx + 6 + jitter * 0.5, sy + 4, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Flame particles on body
       ctx.fillStyle = '#ff6600';
-      ctx.fillRect(sx + jitter, sy - 2, 12, 3);
+      ctx.beginPath();
+      ctx.arc(sx + 3 + jitter, sy - 1, 3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#ffaa00';
-      ctx.fillRect(sx + 3 + jitter, sy - 4, 6, 3);
+      ctx.beginPath();
+      ctx.arc(sx + 7 - jitter, sy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffdd44';
+      ctx.beginPath();
+      ctx.arc(sx + 5, sy - 3 + jitter * 0.5, 2, 0, Math.PI * 2);
+      ctx.fill();
     }
+
+    ctx.restore();
+  }
+
+  _roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  _darkenColor(hex, factor) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgb(${Math.floor(r * factor)},${Math.floor(g * factor)},${Math.floor(b * factor)})`;
   }
 }
