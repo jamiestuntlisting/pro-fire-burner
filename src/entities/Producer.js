@@ -6,7 +6,7 @@ export class Producer extends Entity {
   constructor(x, y) {
     super(x, y);
     this.width = TILE_SIZE;
-    this.height = TILE_SIZE;
+    this.height = TILE_SIZE * 2;
 
     this.moveSpeed = 300;
     this.state = 'MOVING'; // MOVING or BLOCKING
@@ -21,9 +21,22 @@ export class Producer extends Entity {
     this._registeredTiles = [];
     this._tileMap = null;
 
-    // Each producer has slightly different look
-    this.suitColor = ['#1a1a2a', '#2a1a1a', '#1a2a1a'][Math.floor(Math.random() * 3)];
-    this.tieColor = ['#cc2222', '#2255cc', '#cc8800'][Math.floor(Math.random() * 3)];
+    // Each producer has a unique look — diverse ethnicities
+    const skinTones = [
+      { skin: '#f5d0a9', skinDark: '#d4a574', neck: '#e0b88a', hair: '#2a1a0a' },  // light
+      { skin: '#c68642', skinDark: '#a0693d', neck: '#b07540', hair: '#1a1a1a' },  // medium brown
+      { skin: '#8d5524', skinDark: '#6b3f1a', neck: '#7a4820', hair: '#0a0a0a' },  // dark brown
+      { skin: '#ffdbac', skinDark: '#d4a574', neck: '#e8c49a', hair: '#4a3728' },  // fair
+      { skin: '#d4a06a', skinDark: '#b07a42', neck: '#c08e55', hair: '#1a0a00' },  // olive
+      { skin: '#6b4226', skinDark: '#4a2e1a', neck: '#5a3820', hair: '#0a0a0a' },  // deep brown
+    ];
+    const tone = skinTones[Math.floor(Math.random() * skinTones.length)];
+    this.skinColor = tone.skin;
+    this.skinDark = tone.skinDark;
+    this.neckColor = tone.neck;
+    this.hairColor = tone.hair;
+    this.suitColor = ['#1a1a2a', '#2a1a1a', '#1a2a1a', '#2a2a1a'][Math.floor(Math.random() * 4)];
+    this.tieColor = ['#cc2222', '#2255cc', '#cc8800', '#22aa44'][Math.floor(Math.random() * 4)];
     this.hasGlasses = Math.random() > 0.4;
     this.phoneHand = Math.random() > 0.5 ? 'left' : 'right';
   }
@@ -47,17 +60,16 @@ export class Producer extends Entity {
     const dx = playerX - this.getCenterX();
     const dy = playerY - this.getCenterY();
 
-    // Block 3 tiles: center + perpendicular spread
-    // If player is mostly horizontal, spread vertically (and vice versa)
-    const tiles = [{ col, row }];
+    // Block 3 tiles wide x 2 tiles tall (arms out + taller hitbox)
+    const tiles = [{ col, row }, { col, row: row + 1 }];
     if (Math.abs(dx) > Math.abs(dy)) {
       // Player is to the left/right — spread vertically
       tiles.push({ col, row: row - 1 });
-      tiles.push({ col, row: row + 1 });
+      tiles.push({ col, row: row + 2 });
     } else {
       // Player is above/below — spread horizontally
-      tiles.push({ col: col - 1, row });
-      tiles.push({ col: col + 1, row });
+      tiles.push({ col: col - 1, row }, { col: col - 1, row: row + 1 });
+      tiles.push({ col: col + 1, row }, { col: col + 1, row: row + 1 });
     }
 
     for (const t of tiles) {
@@ -225,14 +237,14 @@ export class Producer extends Entity {
       this._roundRect(ctx, sx - 6 + gesture, sy + 14 + b, 8, 5, 2);
       this._roundRect(ctx, sx + 22 - gesture, sy + 14 + b, 8, 5, 2);
       // Hands up - "stop" gesture
-      ctx.fillStyle = '#c4a882';
+      ctx.fillStyle = this.skinColor;
       this._roundRect(ctx, sx - 7 + gesture, sy + 11 + b, 5, 5, 2);
       this._roundRect(ctx, sx + 26 - gesture, sy + 11 + b, 5, 5, 2);
     } else {
       this._roundRect(ctx, sx - 2, sy + 14 + b, 4, 13, 2);
       this._roundRect(ctx, sx + 22, sy + 14 + b, 4, 13, 2);
       // Hands
-      ctx.fillStyle = '#c4a882';
+      ctx.fillStyle = this.skinColor;
       this._roundRect(ctx, sx - 1, sy + 25 + b, 3, 3, 1);
       this._roundRect(ctx, sx + 22, sy + 25 + b, 3, 3, 1);
     }
@@ -251,18 +263,18 @@ export class Producer extends Entity {
     }
 
     // === NECK ===
-    ctx.fillStyle = '#b89870';
+    ctx.fillStyle = this.neckColor;
     ctx.fillRect(sx + 9, sy + 8, 6, 5);
 
     // === HEAD ===
     const headGrad = ctx.createRadialGradient(cx, sy + 4, 0, cx, sy + 4, 8);
-    headGrad.addColorStop(0, '#c4a882');
-    headGrad.addColorStop(1, '#a08060');
+    headGrad.addColorStop(0, this.skinColor);
+    headGrad.addColorStop(1, this.skinDark);
     ctx.fillStyle = headGrad;
     this._roundRect(ctx, sx + 4, sy - 3, 16, 14, 6);
 
     // Slicked back hair
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = this.hairColor;
     this._roundRect(ctx, sx + 4, sy - 5, 16, 6, 4);
     ctx.fillRect(sx + 4, sy - 3, 2, 3);
     ctx.fillRect(sx + 18, sy - 3, 2, 3);
@@ -289,7 +301,7 @@ export class Producer extends Entity {
     ctx.fillRect(sx + 14, sy + 3, 2, 2);
 
     // Stern mouth
-    ctx.fillStyle = '#8a6a4a';
+    ctx.fillStyle = this.skinDark;
     ctx.fillRect(sx + 9, sy + 7, 5, 1.5);
 
     // === BLOCKING SPEECH BUBBLE ===
