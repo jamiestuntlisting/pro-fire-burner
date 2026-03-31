@@ -475,22 +475,6 @@ export class Game {
     // Producer collision - they block the player
     this._checkProducerCollisions();
 
-    // Lay down mechanic
-    if (this.input.actionJustPressed && this.player.isOnFire()) {
-      if (this.player.layDown()) {
-        const safeties = this.entities.filter(e => e instanceof FireSafety && !e.dead);
-        for (const s of safeties) {
-          s.moveToward(this.player.getCenterX(), this.player.getCenterY());
-        }
-      }
-    }
-
-    if (this.player.isLayingDown()) {
-      if (this.player.layDownTimer > 2.0) {
-        this.endLevel('SAFE_OUT');
-        return;
-      }
-    }
 
     const intensity = this.player.getFlameIntensity();
     this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
@@ -1072,7 +1056,7 @@ export class Game {
       if (blink) {
         ctx.fillStyle = '#44ff44';
         ctx.font = '14px monospace';
-        const hintText = this.input._mobileNameActive ? 'TAP SCREEN TO START' : 'PRESS ENTER TO START';
+        const hintText = this.input._mobileNameActive ? 'TAP SCREEN TO START' : 'CLICK OR PRESS ENTER TO START';
         ctx.fillText(hintText, cx, 310);
       }
     } else {

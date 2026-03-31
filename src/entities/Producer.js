@@ -49,7 +49,7 @@ export class Producer extends Entity {
         if (dist < 4) {
           this.state = 'BLOCKING';
           this.pauseTimer = randomRange(2, 4);
-        } else {
+        } else if (dist > 0) {
           const speed = this.moveSpeed * 1.5; // walk fast when entering
           this.x += (dx / dist) * speed * dt;
           this.y += (dy / dist) * speed * dt;
@@ -63,7 +63,7 @@ export class Producer extends Entity {
         const dx = playerX - this.x;
         const dy = playerY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > TILE_SIZE * 1.5) {
+        if (dist > TILE_SIZE * 1.5 && dist > 0) {
           // Creep toward player
           this.x += (dx / dist) * this.moveSpeed * 0.4 * dt;
           this.y += (dy / dist) * this.moveSpeed * 0.4 * dt;
@@ -82,7 +82,7 @@ export class Producer extends Entity {
         if (dist < 4) {
           this.state = 'BLOCKING';
           this.pauseTimer = randomRange(1.5, 3);
-        } else {
+        } else if (dist > 0) {
           const newX = this.x + (dx / dist) * this.moveSpeed * dt;
           const newY = this.y + (dy / dist) * this.moveSpeed * dt;
           if (tileMap && tileMap.isSolid(newX + this.width / 2, newY + this.height / 2)) {

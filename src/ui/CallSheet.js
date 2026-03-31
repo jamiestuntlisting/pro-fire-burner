@@ -101,7 +101,7 @@ export class CallSheet {
     ctx.font = '14px monospace';
     const blink = Math.sin(Date.now() / 300) > 0;
     if (blink) {
-      ctx.fillText('PRESS ENTER TO BEGIN', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 40);
+      ctx.fillText('CLICK OR PRESS ENTER TO BEGIN', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 40);
     }
 
     ctx.textAlign = 'left';

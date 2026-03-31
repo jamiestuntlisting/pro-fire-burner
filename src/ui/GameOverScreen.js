@@ -83,6 +83,18 @@ export class GameOverScreen {
       this._prevDown = false;
     }
 
+    // Check for mouse click on options
+    if (input._mouseClickY > 0 && isGameOver) {
+      const baseY = VIEWPORT_HEIGHT - 80;
+      const options = ['TRY AGAIN', 'MAIN MENU'];
+      for (let i = 0; i < options.length; i++) {
+        const optY = baseY + i * 28;
+        if (input._mouseClickY >= optY - 16 && input._mouseClickY <= optY + 8) {
+          this.selectedOption = i;
+        }
+      }
+    }
+
     if (input.enterJustPressed) {
       if (isGameOver) {
         return this.selectedOption === 0 ? { action: 'RETRY' } : { action: 'MENU' };
@@ -172,7 +184,7 @@ export class GameOverScreen {
       ctx.fillStyle = '#44ff44';
       ctx.font = 'bold 18px monospace';
       const blink = Math.sin(Date.now() / 300) > 0;
-      if (blink) ctx.fillText('PRESS ENTER FOR NEXT LEVEL', cx, y);
+      if (blink) ctx.fillText('CLICK OR PRESS ENTER FOR NEXT LEVEL', cx, y);
     }
 
     ctx.textAlign = 'left';

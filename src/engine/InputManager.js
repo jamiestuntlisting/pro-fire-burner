@@ -13,8 +13,11 @@ export class InputManager {
     this._prevEnter = false;
     this.isTouchDevice = false;
 
-    // Touch tap for menu/enter
+    // Touch tap / mouse click for menu/enter
     this._touchTap = false;
+    this._mouseClick = false;
+    this._mouseClickY = 0;
+    this.clickedMenuOption = null;
 
     // Joystick state
     this.joystickActive = false;
@@ -30,12 +33,21 @@ export class InputManager {
 
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
-      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault();
       }
     });
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
+    });
+
+    // Mouse click on canvas for menu selection
+    const canvasEl = canvas.canvas || canvas;
+    canvasEl.addEventListener('click', (e) => {
+      const rect = canvasEl.getBoundingClientRect();
+      this._mouseClick = true;
+      this._mouseClickX = (e.clientX - rect.left) * (canvasEl.width / rect.width);
+      this._mouseClickY = (e.clientY - rect.top) * (canvasEl.height / rect.height);
     });
 
     this._setupTouch();
@@ -228,12 +240,13 @@ export class InputManager {
     this.actionJustPressed = currentAction && !this._prevAction;
     this._prevAction = currentAction;
 
-    // Enter key OR touch tap
-    const currentEnter = this.keys['Enter'] || this.keys['NumpadEnter'] || this._touchTap;
+    // Enter key OR touch tap OR mouse click
+    const currentEnter = this.keys['Enter'] || this.keys['NumpadEnter'] || this._touchTap || this._mouseClick;
     this.enterJustPressed = currentEnter && !this._prevEnter;
     this._prevEnter = currentEnter;
-    // Consume tap after one frame
+    // Consume tap/click after one frame
     this._touchTap = false;
+    this._mouseClick = false;
   }
 
   isActionDown() {

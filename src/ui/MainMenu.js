@@ -70,7 +70,18 @@ export class MainMenu {
       }
     }
 
-    // Navigation
+    // Check for mouse click on a menu option
+    if (input._mouseClickY > 0) {
+      const menuStartY = 120 + 140; // titleY + offset
+      for (let i = 0; i < this.options.length; i++) {
+        const optY = menuStartY + i * 40;
+        if (input._mouseClickY >= optY - 16 && input._mouseClickY <= optY + 8) {
+          this.selectedIndex = i;
+        }
+      }
+    }
+
+    // Navigation - enter key, click, or tap
     if (input.enterJustPressed) {
       return this.options[this.selectedIndex];
     }
@@ -152,7 +163,7 @@ export class MainMenu {
     // Controls hint
     ctx.fillStyle = '#554433';
     ctx.font = '12px monospace';
-    ctx.fillText('ARROWS/WASD to move  |  SPACE to lay down  |  ENTER to select', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
+    ctx.fillText('ARROWS/WASD to move  |  CLICK or ENTER to select', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
 
     ctx.textAlign = 'left';
   }

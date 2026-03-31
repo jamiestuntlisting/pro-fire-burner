@@ -72,7 +72,7 @@ export class HighScoreBoard {
     ctx.textAlign = 'center';
     const blink = Math.sin(this.timer * 3) > 0;
     if (blink) {
-      ctx.fillText('PRESS ENTER TO GO BACK', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
+      ctx.fillText('CLICK OR PRESS ENTER TO GO BACK', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
     }
 
     ctx.textAlign = 'left';
