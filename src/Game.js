@@ -396,6 +396,9 @@ export class Game {
     const py = this.player.getCenterY();
 
     const allProducers = this.entities.filter(e => e instanceof Producer && !e.dead);
+    // Use foot position for producer targeting so they block at the feet, not shoulders
+    const footX = this.player.getFootCenterX();
+    const footY = this.player.getFootCenterY();
 
     for (const entity of this.entities) {
       if (entity.dead) continue;
@@ -404,7 +407,7 @@ export class Game {
         entity.setPlayerPosition(px, py);
         entity.update(dt);
       } else if (entity instanceof Producer) {
-        entity.update(dt, this.tileMap, px, py, allProducers);
+        entity.update(dt, this.tileMap, footX, footY, allProducers);
       } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
       } else {

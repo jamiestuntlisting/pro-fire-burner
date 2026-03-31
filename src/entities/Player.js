@@ -91,9 +91,13 @@ export class Player extends Entity {
   getFeetX() { return this.x + this.width / 2; }
   getFeetY() { return this.y + this.height; }
 
+  // Foot center for positioning (where the character "stands")
+  getFootCenterX() { return this.x + this.width / 2; }
+  getFootCenterY() { return this.y + this.height - 6; }
+
   // Foot hitbox for tile/wall collisions (bottom portion of sprite)
   getFootBounds() {
-    const footHeight = 16;
+    const footHeight = 12;
     return {
       x: this.x + 2,
       y: this.y + this.height - footHeight,
