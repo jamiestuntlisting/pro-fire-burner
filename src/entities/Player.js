@@ -95,16 +95,16 @@ export class Player extends Entity {
   getFootCenterX() { return this.x + this.width / 2; }
   getFootCenterY() { return this.y + this.height - 6; }
 
-  // Foot hitbox for tile/wall collisions (bottom portion of sprite)
+  // Foot hitbox for tile/wall collisions — thin strip at the very bottom
   getFootBounds() {
-    const footHeight = 12;
+    const footHeight = 4;
     return {
-      x: this.x + 2,
+      x: this.x + 4,
       y: this.y + this.height - footHeight,
-      width: this.width - 4,
+      width: this.width - 8,
       height: footHeight,
       // Offsets from entity origin for collision resolution
-      offsetX: 2,
+      offsetX: 4,
       offsetY: this.height - footHeight,
     };
   }
