@@ -4,7 +4,7 @@ import { randomRange } from '../utils/math.js';
 export class MainMenu {
   constructor() {
     this.selectedIndex = 0;
-    this.options = ['NEW GAME', 'HIGH SCORES'];
+    this.options = ['NEW GAME'];
     this.showAdmin = false;
     this.fireParticles = [];
     this.timer = 0;
@@ -160,11 +160,6 @@ export class MainMenu {
       ctx.font = '20px monospace';
       ctx.fillText(this.options[i], VIEWPORT_WIDTH / 2, y);
     }
-
-    // Controls hint
-    ctx.fillStyle = '#554433';
-    ctx.font = '12px monospace';
-    ctx.fillText('ARROWS/WASD to move  |  CLICK or ENTER to select', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT - 30);
 
     ctx.textAlign = 'left';
   }
