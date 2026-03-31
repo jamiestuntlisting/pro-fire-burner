@@ -127,7 +127,7 @@ export class Player extends Entity {
     if (this.fireState === FIRE_STATE.ON_FIRE) {
       this.secondsOnFire += dt;
       this.totalTime += dt;
-      const stillnessPenalty = this.isMoving ? 0.7 : 2.0;
+      const stillnessPenalty = this.isMoving ? 0.7 : 4.0;
       const multiplier = this.drainMultiplier * stillnessPenalty;
       this.gel -= this.gelRate * multiplier * dt;
       this.fuel -= this.fuelRate * multiplier * dt;

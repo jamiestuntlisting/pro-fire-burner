@@ -28,7 +28,7 @@ export class FireSafety extends Entity {
     // AI state machine
     this.aiState = SAFETY_STATE.PATROLLING;
     this.aimTimer = 0;
-    this.aimDelay = 0.3 + Math.random() * 0.2; // Very fast reaction
+    this.aimDelay = 0.15 + Math.random() * 0.1; // Very fast reaction
     this.sprayTimer = 0;
     this.sprayDuration = 3.0; // 3 second spray burst
     this.cooldownTimer = 0;
@@ -103,7 +103,7 @@ export class FireSafety extends Entity {
     const dy = this.playerY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (dist > this.followDistance) {
+    if (dist > 1) {
       const nx = dx / dist;
       const ny = dy / dist;
       this.x += nx * this.followSpeed * dt;
@@ -215,7 +215,7 @@ export class FireSafety extends Entity {
         this.cooldownTimer += dt;
         if (this.cooldownTimer >= this.cooldownDuration) {
           this.aiState = SAFETY_STATE.FOLLOWING;
-          this.aimDelay = 1.0 + Math.random() * 1.0;
+          this.aimDelay = 0.5 + Math.random() * 0.5;
           this.sprayDuration = 1.2 + Math.random() * 1.0;
         }
         break;
