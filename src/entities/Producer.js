@@ -5,19 +5,25 @@ import { randomRange } from '../utils/math.js';
 export class Producer extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 48;
-    this.height = 56;
+    this.width = TILE_SIZE;
+    this.height = TILE_SIZE;
 
-    this.moveSpeed = 80;
-    this.targetX = x;
-    this.targetY = y;
-    this.state = 'ENTERING'; // ENTERING, BLOCKING, REPOSITIONING
-    this.pauseTimer = 0;
+    this.moveSpeed = 120;
+    this.targetCol = Math.floor(x / TILE_SIZE);
+    this.targetRow = Math.floor(y / TILE_SIZE);
+    this.state = 'MOVING'; // MOVING or BLOCKING
+    this.blockTimer = 0;
+    this.repositionTimer = 0;
+    this.repositionInterval = randomRange(3, 6);
 
     this.animTimer = 0;
     this.animFrame = 0;
     this.breatheTimer = Math.random() * Math.PI * 2;
-    this.gestureTimer = 0; // for arm-waving blocking gesture
+    this.gestureTimer = 0;
+
+    // Registered solid tiles
+    this._registeredTiles = [];
+    this._tileMap = null;
 
     // Each producer has slightly different look
     this.suitColor = ['#1a1a2a', '#2a1a1a', '#1a2a1a'][Math.floor(Math.random() * 3)];
@@ -26,13 +32,83 @@ export class Producer extends Entity {
     this.phoneHand = Math.random() > 0.5 ? 'left' : 'right';
   }
 
-  setPlayerTarget(px, py) {
-    // Move to intercept the player's path
-    this.targetX = px + randomRange(-TILE_SIZE * 2, TILE_SIZE * 2);
-    this.targetY = py + randomRange(-TILE_SIZE * 2, TILE_SIZE * 2);
+  _snapToGrid() {
+    const col = Math.round(this.x / TILE_SIZE);
+    const row = Math.round(this.y / TILE_SIZE);
+    this.x = col * TILE_SIZE;
+    this.y = row * TILE_SIZE;
+    return { col, row };
   }
 
-  update(dt, tileMap, playerX, playerY) {
+  _registerTiles(tileMap, playerX, playerY) {
+    this._unregisterTiles();
+    this._tileMap = tileMap;
+    const col = Math.round(this.x / TILE_SIZE);
+    const row = Math.round(this.y / TILE_SIZE);
+
+    // Check if player is standing on this tile
+    const pCol = Math.floor((playerX) / TILE_SIZE);
+    const pRow = Math.floor((playerY) / TILE_SIZE);
+    if (col === pCol && row === pRow) return; // don't trap the player
+
+    tileMap.addDynamicSolid(col, row);
+    this._registeredTiles.push({ col, row });
+  }
+
+  _unregisterTiles() {
+    if (!this._tileMap) return;
+    for (const t of this._registeredTiles) {
+      this._tileMap.removeDynamicSolid(t.col, t.row);
+    }
+    this._registeredTiles = [];
+  }
+
+  _pickTargetTile(tileMap, playerX, playerY, allProducers) {
+    const pCol = Math.floor(playerX / TILE_SIZE);
+    const pRow = Math.floor(playerY / TILE_SIZE);
+    const blockRange = 2; // tiles away from player
+
+    // 8 candidate positions around player
+    const dirs = [
+      [-1, 0], [1, 0], [0, -1], [0, 1],
+      [-1, -1], [-1, 1], [1, -1], [1, 1],
+    ];
+
+    let bestCol = pCol + blockRange;
+    let bestRow = pRow;
+    let bestDist = Infinity;
+
+    const myCol = Math.round(this.x / TILE_SIZE);
+    const myRow = Math.round(this.y / TILE_SIZE);
+
+    for (const [dx, dy] of dirs) {
+      const c = pCol + dx * blockRange;
+      const r = pRow + dy * blockRange;
+
+      // Skip wall tiles
+      if (tileMap.getTile(c, r) === 1) continue;
+
+      // Skip tiles already claimed by other producers
+      let claimed = false;
+      for (const p of allProducers) {
+        if (p === this || p.dead) continue;
+        if (p.targetCol === c && p.targetRow === r) { claimed = true; break; }
+      }
+      if (claimed) continue;
+
+      const d = Math.abs(c - myCol) + Math.abs(r - myRow); // manhattan distance
+      if (d < bestDist) {
+        bestDist = d;
+        bestCol = c;
+        bestRow = r;
+      }
+    }
+
+    this.targetCol = bestCol;
+    this.targetRow = bestRow;
+  }
+
+  update(dt, tileMap, playerX, playerY, allProducers) {
     this.animTimer += dt;
     this.breatheTimer += dt;
     this.gestureTimer += dt;
@@ -41,61 +117,52 @@ export class Producer extends Entity {
       this.animFrame = (this.animFrame + 1) % 4;
     }
 
+    const targetX = this.targetCol * TILE_SIZE;
+    const targetY = this.targetRow * TILE_SIZE;
+
     switch (this.state) {
-      case 'ENTERING': {
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
+      case 'MOVING': {
+        this._unregisterTiles();
+        const dx = targetX - this.x;
+        const dy = targetY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 4) {
+
+        if (dist < 2) {
+          // Arrived at target tile
+          this._snapToGrid();
           this.state = 'BLOCKING';
-          this.pauseTimer = randomRange(2, 4);
+          this.blockTimer = 0;
+          this.repositionTimer = 0;
+          this._registerTiles(tileMap, playerX, playerY);
         } else if (dist > 0) {
-          const speed = this.moveSpeed * 1.5; // walk fast when entering
-          this.x += (dx / dist) * speed * dt;
-          this.y += (dy / dist) * speed * dt;
+          this.x += (dx / dist) * this.moveSpeed * dt;
+          this.y += (dy / dist) * this.moveSpeed * dt;
         }
         break;
       }
 
       case 'BLOCKING': {
-        this.pauseTimer -= dt;
-        // Slowly drift toward player to keep blocking
-        const dx = playerX - this.x;
-        const dy = playerY - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > TILE_SIZE * 1.5 && dist > 0) {
-          // Creep toward player
-          this.x += (dx / dist) * this.moveSpeed * 0.4 * dt;
-          this.y += (dy / dist) * this.moveSpeed * 0.4 * dt;
-        }
-        if (this.pauseTimer <= 0) {
-          this.state = 'REPOSITIONING';
-          this.setPlayerTarget(playerX, playerY);
-        }
-        break;
-      }
+        this.blockTimer += dt;
+        this.repositionTimer += dt;
 
-      case 'REPOSITIONING': {
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 4) {
-          this.state = 'BLOCKING';
-          this.pauseTimer = randomRange(1.5, 3);
-        } else if (dist > 0) {
-          const newX = this.x + (dx / dist) * this.moveSpeed * dt;
-          const newY = this.y + (dy / dist) * this.moveSpeed * dt;
-          if (tileMap && tileMap.isSolid(newX + this.width / 2, newY + this.height / 2)) {
-            this.state = 'BLOCKING';
-            this.pauseTimer = randomRange(1, 2);
-          } else {
-            this.x = newX;
-            this.y = newY;
-          }
+        // Re-register tiles each frame (handles player moving away)
+        this._registerTiles(tileMap, playerX, playerY);
+
+        // Periodically pick a new target closer to the player
+        if (this.repositionTimer >= this.repositionInterval) {
+          this.repositionTimer = 0;
+          this.repositionInterval = randomRange(3, 6);
+          this._unregisterTiles();
+          this._pickTargetTile(tileMap, playerX, playerY, allProducers || []);
+          this.state = 'MOVING';
         }
         break;
       }
     }
+  }
+
+  destroy() {
+    this._unregisterTiles();
   }
 
   render(ctx, camera) {
@@ -105,10 +172,10 @@ export class Producer extends Entity {
 
     ctx.save();
 
-    // Scale up 1.8x, offset to center in the larger hitbox
-    const scale = 1.8;
+    // Scale to fill the tile
+    const scale = TILE_SIZE / 24; // base sprite is 24px wide
     const drawOffsetX = (this.width - 24 * scale) / 2;
-    const drawOffsetY = (this.height - 48 * scale) / 2;
+    const drawOffsetY = (this.height - 48 * scale);
     ctx.translate(baseX + drawOffsetX, baseY + drawOffsetY);
     ctx.scale(scale, scale);
 

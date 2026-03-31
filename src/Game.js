@@ -395,6 +395,8 @@ export class Game {
     const px = this.player.getCenterX();
     const py = this.player.getCenterY();
 
+    const allProducers = this.entities.filter(e => e instanceof Producer && !e.dead);
+
     for (const entity of this.entities) {
       if (entity.dead) continue;
 
@@ -402,7 +404,7 @@ export class Game {
         entity.setPlayerPosition(px, py);
         entity.update(dt);
       } else if (entity instanceof Producer) {
-        entity.update(dt, this.tileMap, px, py);
+        entity.update(dt, this.tileMap, px, py, allProducers);
       } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
       } else {
@@ -450,9 +452,6 @@ export class Game {
 
     // Pickup collection - always active, not just when on fire
     this._checkPickupCollection();
-
-    // Producer collision - they block the player
-    this._checkProducerCollisions();
 
 
     const intensity = this.player.getFlameIntensity();
@@ -532,46 +531,24 @@ export class Game {
   _spawnProducers() {
     const px = this.player.x;
     const py = this.player.y;
+    const producers = [];
     for (let i = 0; i < PRODUCER_COUNT; i++) {
       const angle = (i / PRODUCER_COUNT) * Math.PI * 2;
       const spawnDist = TILE_SIZE * 6;
-      let sx = px + Math.cos(angle) * spawnDist;
-      let sy = py + Math.sin(angle) * spawnDist;
+      // Snap spawn position to tile grid
+      let sx = Math.round((px + Math.cos(angle) * spawnDist) / TILE_SIZE) * TILE_SIZE;
+      let sy = Math.round((py + Math.sin(angle) * spawnDist) / TILE_SIZE) * TILE_SIZE;
       sx = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.widthPx - TILE_SIZE * 3, sx));
       sy = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.heightPx - TILE_SIZE * 3, sy));
       const producer = new Producer(sx, sy);
-      producer.setPlayerTarget(px, py);
+      producer._pickTargetTile(this.tileMap, px, py, producers);
+      producers.push(producer);
       this.entities.push(producer);
     }
     this.camera.shake(3, 0.4);
   }
 
-  _checkProducerCollisions() {
-    for (const entity of this.entities) {
-      if (entity.dead || !(entity instanceof Producer)) continue;
-      if (!this.collisionSystem.entitiesOverlap(this.player, entity)) continue;
-
-      // Treat producer as a solid wall - resolve overlap completely
-      const pb = this.player.getBounds();
-      const eb = entity.getBounds();
-
-      // Calculate overlap on each axis
-      const overlapLeft = pb.x + pb.width - eb.x;
-      const overlapRight = eb.x + eb.width - pb.x;
-      const overlapTop = pb.y + pb.height - eb.y;
-      const overlapBottom = eb.y + eb.height - pb.y;
-
-      // Find smallest overlap to resolve
-      const minOverlapX = overlapLeft < overlapRight ? -overlapLeft : overlapRight;
-      const minOverlapY = overlapTop < overlapBottom ? -overlapTop : overlapBottom;
-
-      if (Math.abs(minOverlapX) < Math.abs(minOverlapY)) {
-        this.player.x += minOverlapX;
-      } else {
-        this.player.y += minOverlapY;
-      }
-    }
-  }
+  // Producers register as solid tiles - no separate collision needed
 
   _checkFireSpread(px, py) {
     // Camera catches fire if performer gets too close

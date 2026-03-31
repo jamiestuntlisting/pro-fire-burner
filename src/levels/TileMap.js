@@ -10,6 +10,7 @@ export class TileMap {
     this.theme = theme || DEFAULT_THEME;
     this.waterFrame = 0;
     this.waterTimer = 0;
+    this._dynamicSolids = new Map(); // "col,row" -> ref count
   }
 
   update(dt) {
@@ -32,7 +33,29 @@ export class TileMap {
   }
 
   isSolid(x, y) {
-    return this.getTileAtWorld(x, y) === TILE_WALL;
+    if (this.getTileAtWorld(x, y) === TILE_WALL) return true;
+    const col = Math.floor(x / TILE_SIZE);
+    const row = Math.floor(y / TILE_SIZE);
+    return this._dynamicSolids.has(`${col},${row}`);
+  }
+
+  addDynamicSolid(col, row) {
+    const key = `${col},${row}`;
+    this._dynamicSolids.set(key, (this._dynamicSolids.get(key) || 0) + 1);
+  }
+
+  removeDynamicSolid(col, row) {
+    const key = `${col},${row}`;
+    const count = (this._dynamicSolids.get(key) || 0) - 1;
+    if (count <= 0) {
+      this._dynamicSolids.delete(key);
+    } else {
+      this._dynamicSolids.set(key, count);
+    }
+  }
+
+  isDynamicSolid(col, row) {
+    return this._dynamicSolids.has(`${col},${row}`);
   }
 
   isWater(x, y) {
