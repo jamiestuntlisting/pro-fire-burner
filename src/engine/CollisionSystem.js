@@ -57,7 +57,7 @@ export class CollisionSystem {
 
     // Corner correction: if one axis was blocked, try nudging on the other
     // to slide past tile corners the hitbox barely clips
-    const nudge = 3;
+    const nudge = 4;
     if (xBlocked && !yBlocked) {
       // Trying to move X but blocked — try nudging Y to slide past corner
       const fx = resolvedX + offX; // still at old X
@@ -87,17 +87,16 @@ export class CollisionSystem {
   }
 
   _collidesWithWall(x, y, w, h) {
-    // Check corners plus midpoints of the hitbox
-    const margin = 1;
+    // Check 4 corners plus center of each edge (6 points)
+    // Use 2px margin to prevent getting stuck on tile edges
+    const m = 2;
     const points = [
-      { x: x + margin, y: y + margin },
-      { x: x + w - margin, y: y + margin },
-      { x: x + margin, y: y + h - margin },
-      { x: x + w - margin, y: y + h - margin },
-      { x: x + w / 2, y: y + margin },
-      { x: x + w / 2, y: y + h - margin },
-      { x: x + margin, y: y + h / 2 },
-      { x: x + w - margin, y: y + h / 2 },
+      { x: x + m, y: y + m },          // top-left
+      { x: x + w - m, y: y + m },      // top-right
+      { x: x + m, y: y + h - m },      // bottom-left
+      { x: x + w - m, y: y + h - m },  // bottom-right
+      { x: x + w / 2, y: y + m },      // top-center
+      { x: x + w / 2, y: y + h - m },  // bottom-center
     ];
 
     for (const p of points) {
