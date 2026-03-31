@@ -184,8 +184,8 @@ export class Game {
 
     this.collisionSystem.setTileMap(this.tileMap);
     this.camera.setMapBounds(this.tileMap.widthPx, this.tileMap.heightPx);
-    this.camera.x = this.player.getCenterX() - VIEWPORT_WIDTH / 2;
-    this.camera.y = this.player.getCenterY() - VIEWPORT_HEIGHT / 2;
+    this.camera.x = this.player.getFootCenterX() - VIEWPORT_WIDTH / 2;
+    this.camera.y = this.player.getFootCenterY() - VIEWPORT_HEIGHT / 2;
     this.camera.targetZoom = 0.27;
     this.camera.zoom = 0.27;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);

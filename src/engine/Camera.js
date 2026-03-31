@@ -57,8 +57,11 @@ export class Camera {
 
   follow(entity) {
     if (this.mode !== CAMERA_MODE.FOLLOW) return;
-    this.targetX = entity.getCenterX() - VIEWPORT_WIDTH / (2 * this.zoom);
-    this.targetY = entity.getCenterY() - VIEWPORT_HEIGHT / (2 * this.zoom);
+    // Use foot position if available (top-down game — camera should center on feet, not torso)
+    const fx = typeof entity.getFootCenterX === 'function' ? entity.getFootCenterX() : entity.getCenterX();
+    const fy = typeof entity.getFootCenterY === 'function' ? entity.getFootCenterY() : entity.getCenterY();
+    this.targetX = fx - VIEWPORT_WIDTH / (2 * this.zoom);
+    this.targetY = fy - VIEWPORT_HEIGHT / (2 * this.zoom);
     this._lastFollowEntity = entity;
   }
 
@@ -86,8 +89,8 @@ export class Camera {
     // Hard clamp: ensure followed entity never leaves the screen
     if (this._lastFollowEntity && this.mode === CAMERA_MODE.FOLLOW) {
       const ent = this._lastFollowEntity;
-      const ex = ent.getCenterX();
-      const ey = ent.getCenterY();
+      const ex = typeof ent.getFootCenterX === 'function' ? ent.getFootCenterX() : ent.getCenterX();
+      const ey = typeof ent.getFootCenterY === 'function' ? ent.getFootCenterY() : ent.getCenterY();
       const vw = VIEWPORT_WIDTH / this.zoom;
       const vh = VIEWPORT_HEIGHT / this.zoom;
       const margin = 32 / this.zoom; // pixel margin from screen edge
