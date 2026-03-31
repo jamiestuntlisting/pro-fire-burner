@@ -549,14 +549,26 @@ export class Game {
   _checkProducerCollisions() {
     for (const entity of this.entities) {
       if (entity.dead || !(entity instanceof Producer)) continue;
-      if (this.collisionSystem.entitiesOverlap(this.player, entity)) {
-        // Push player away from producer
-        const dx = this.player.getCenterX() - entity.getCenterX();
-        const dy = this.player.getCenterY() - entity.getCenterY();
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const pushForce = 3;
-        this.player.x += (dx / dist) * pushForce;
-        this.player.y += (dy / dist) * pushForce;
+      if (!this.collisionSystem.entitiesOverlap(this.player, entity)) continue;
+
+      // Treat producer as a solid wall - resolve overlap completely
+      const pb = this.player.getBounds();
+      const eb = entity.getBounds();
+
+      // Calculate overlap on each axis
+      const overlapLeft = pb.x + pb.width - eb.x;
+      const overlapRight = eb.x + eb.width - pb.x;
+      const overlapTop = pb.y + pb.height - eb.y;
+      const overlapBottom = eb.y + eb.height - pb.y;
+
+      // Find smallest overlap to resolve
+      const minOverlapX = overlapLeft < overlapRight ? -overlapLeft : overlapRight;
+      const minOverlapY = overlapTop < overlapBottom ? -overlapTop : overlapBottom;
+
+      if (Math.abs(minOverlapX) < Math.abs(minOverlapY)) {
+        this.player.x += minOverlapX;
+      } else {
+        this.player.y += minOverlapY;
       }
     }
   }

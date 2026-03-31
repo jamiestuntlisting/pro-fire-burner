@@ -5,8 +5,8 @@ import { randomRange } from '../utils/math.js';
 export class Producer extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 24;
-    this.height = 48;
+    this.width = 48;
+    this.height = 56;
 
     this.moveSpeed = 80;
     this.targetX = x;
@@ -100,12 +100,22 @@ export class Producer extends Entity {
 
   render(ctx, camera) {
     const screen = camera.worldToScreen(this.x, this.y);
-    const sx = Math.floor(screen.x);
-    const sy = Math.floor(screen.y);
-    const cx = sx + 12;
-    const b = Math.sin(this.breatheTimer * 2) * 0.5;
+    const baseX = Math.floor(screen.x);
+    const baseY = Math.floor(screen.y);
 
     ctx.save();
+
+    // Scale up 1.8x, offset to center in the larger hitbox
+    const scale = 1.8;
+    const drawOffsetX = (this.width - 24 * scale) / 2;
+    const drawOffsetY = (this.height - 48 * scale) / 2;
+    ctx.translate(baseX + drawOffsetX, baseY + drawOffsetY);
+    ctx.scale(scale, scale);
+
+    const sx = 0;
+    const sy = 0;
+    const cx = sx + 12;
+    const b = Math.sin(this.breatheTimer * 2) * 0.5;
 
     const isWalking = this.state !== 'BLOCKING';
     const legSwing = isWalking ? Math.sin(this.animTimer * 30) * 3 : 0;
