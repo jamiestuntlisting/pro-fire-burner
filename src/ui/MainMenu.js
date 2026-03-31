@@ -70,38 +70,9 @@ export class MainMenu {
       }
     }
 
-    // Check for mouse click on a menu option
-    if (input._mouseClickY > 0) {
-      const menuStartY = 120 + 140; // titleY + offset
-      for (let i = 0; i < this.options.length; i++) {
-        const optY = menuStartY + i * 40;
-        if (input._mouseClickY >= optY - 16 && input._mouseClickY <= optY + 8) {
-          this.selectedIndex = i;
-        }
-      }
-    }
-
-    // Navigation - enter key, click, or tap
-    if (input.enterJustPressed) {
-      return this.options[this.selectedIndex];
-    }
-
-    if (input.keys['ArrowUp'] || input.keys['KeyW']) {
-      if (!this._prevUp) {
-        this.selectedIndex = (this.selectedIndex - 1 + this.options.length) % this.options.length;
-      }
-      this._prevUp = true;
-    } else {
-      this._prevUp = false;
-    }
-
-    if (input.keys['ArrowDown'] || input.keys['KeyS']) {
-      if (!this._prevDown) {
-        this.selectedIndex = (this.selectedIndex + 1) % this.options.length;
-      }
-      this._prevDown = true;
-    } else {
-      this._prevDown = false;
+    // Auto-transition after 3 seconds, or any input
+    if (this.timer > 3 || input.enterJustPressed || input.anyKeyPressed()) {
+      return 'NEW GAME';
     }
 
     return null;
@@ -142,24 +113,7 @@ export class MainMenu {
     // Tagline
     ctx.fillStyle = '#aa7744';
     ctx.font = '14px monospace';
-    ctx.fillText('"Stay on fire and stay safe!"', VIEWPORT_WIDTH / 2, titleY + 76);
-
-    // Menu options
-    const menuStartY = titleY + 140;
-    for (let i = 0; i < this.options.length; i++) {
-      const y = menuStartY + i * 40;
-      const selected = i === this.selectedIndex;
-
-      if (selected) {
-        ctx.fillStyle = '#ff6600';
-        ctx.fillText('>', VIEWPORT_WIDTH / 2 - 100, y);
-        ctx.fillStyle = '#ffcc00';
-      } else {
-        ctx.fillStyle = '#886644';
-      }
-      ctx.font = '20px monospace';
-      ctx.fillText(this.options[i], VIEWPORT_WIDTH / 2, y);
-    }
+    ctx.fillText('"The longer the burn, the bigger the check"', VIEWPORT_WIDTH / 2, titleY + 76);
 
     ctx.textAlign = 'left';
   }
