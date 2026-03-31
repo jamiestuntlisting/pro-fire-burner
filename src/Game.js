@@ -184,8 +184,8 @@ export class Game {
 
     this.collisionSystem.setTileMap(this.tileMap);
     this.camera.setMapBounds(this.tileMap.widthPx, this.tileMap.heightPx);
-    this.camera.x = this.player.getFootCenterX() - VIEWPORT_WIDTH / 2;
-    this.camera.y = this.player.getFootCenterY() - VIEWPORT_HEIGHT / 2;
+    this.camera.x = this.player.getCenterX() - VIEWPORT_WIDTH / 2;
+    this.camera.y = this.player.getCenterY() - VIEWPORT_HEIGHT / 2;
     this.camera.targetZoom = 0.27;
     this.camera.zoom = 0.27;
     this.ambientLight.setTimeOfDay(this.levelConfig.timeOfDay);
@@ -347,7 +347,7 @@ export class Game {
 
     // Update fire renderer with growing intensity during light-up
     const intensity = this.player.getFlameIntensity();
-    this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+    this.fireRenderer.update(dt, this.player.x, this.player.y + this.player.getSpriteOffsetY(), intensity);
     this.particles.update(dt);
 
     // When lighting-up animation completes, transition to countdown
@@ -362,7 +362,7 @@ export class Game {
 
     // Keep fire going during countdown
     const intensity = this.player.getFlameIntensity();
-    this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+    this.fireRenderer.update(dt, this.player.x, this.player.y + this.player.getSpriteOffsetY(), intensity);
 
     if (this.countdown.update(dt)) {
       this.state = STATES.PLAYING;
@@ -396,9 +396,6 @@ export class Game {
     const py = this.player.getCenterY();
 
     const allProducers = this.entities.filter(e => e instanceof Producer && !e.dead);
-    // Use foot position for producer targeting so they block at the feet, not shoulders
-    const footX = this.player.getFootCenterX();
-    const footY = this.player.getFootCenterY();
 
     for (const entity of this.entities) {
       if (entity.dead) continue;
@@ -407,7 +404,7 @@ export class Game {
         entity.setPlayerPosition(px, py);
         entity.update(dt);
       } else if (entity instanceof Producer) {
-        entity.update(dt, this.tileMap, footX, footY, allProducers);
+        entity.update(dt, this.tileMap, px, py, allProducers);
       } else if (entity instanceof Extra || entity instanceof Principal) {
         entity.update(dt, this.tileMap);
       } else {
@@ -458,8 +455,8 @@ export class Game {
 
 
     const intensity = this.player.getFlameIntensity();
-    this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
-    this.trailRenderer.update(dt, this.player.x, this.player.y, this.player.isMoving, intensity);
+    this.fireRenderer.update(dt, this.player.x, this.player.y + this.player.getSpriteOffsetY(), intensity);
+    this.trailRenderer.update(dt, this.player.x, this.player.y + this.player.getSpriteOffsetY(), this.player.isMoving, intensity);
     this.particles.update(dt);
 
     this.stuntCoordinator.update(dt, this.player.isMoving, this.filmCamera);
@@ -681,7 +678,7 @@ export class Game {
 
     if (this.player.isOnFire()) {
       const intensity = this.player.getFlameIntensity();
-      this.fireRenderer.update(dt, this.player.x, this.player.y, intensity);
+      this.fireRenderer.update(dt, this.player.x, this.player.y + this.player.getSpriteOffsetY(), intensity);
     }
 
     for (const entity of this.entities) {

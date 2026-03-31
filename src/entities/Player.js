@@ -13,11 +13,16 @@ export const FIRE_STATE = {
   LAYING_DOWN: 'LAYING_DOWN',
 };
 
+// Visual sprite height (for rendering offset)
+const SPRITE_HEIGHT = 64;
+const SPRITE_WIDTH = 28;
+
 export class Player extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.width = 28;
-    this.height = 64;
+    // Collision box = ground footprint only
+    this.width = 24;
+    this.height = 20;
 
     this.fireState = FIRE_STATE.NOT_LIT;
     this.gel = GEL_MAX;
@@ -87,29 +92,16 @@ export class Player extends Entity {
   isOnFire() { return this.fireState === FIRE_STATE.ON_FIRE; }
   isLayingDown() { return this.fireState === FIRE_STATE.LAYING_DOWN; }
 
-  // Feet position for water/collision checks
+  // Feet position for water/collision checks (center of collision box)
   getFeetX() { return this.x + this.width / 2; }
   getFeetY() { return this.y + this.height; }
 
-  // Foot center for positioning (where the character "stands")
-  getFootCenterX() { return this.x + this.width / 2; }
-  getFootCenterY() { return this.y + this.height - 6; }
+  // Foot center = entity center (collision box IS the foot area now)
+  getFootCenterX() { return this.getCenterX(); }
+  getFootCenterY() { return this.getCenterY(); }
 
-  // Foot hitbox for tile/wall collisions
-  // An 8px tall box centered on the feet (bottom of sprite)
-  // Extends 4px above and 4px below the sprite bottom
-  getFootBounds() {
-    const footHeight = 8;
-    const footTop = this.height - 4; // 4px above sprite bottom
-    return {
-      x: this.x + 4,
-      y: this.y + footTop,
-      width: this.width - 8,
-      height: footHeight,
-      offsetX: 4,
-      offsetY: footTop,
-    };
-  }
+  // Visual offset: how far above the collision box to draw the sprite
+  getSpriteOffsetY() { return -(SPRITE_HEIGHT - this.height); }
 
   getFlameIntensity() {
     if (this.fireState === FIRE_STATE.LIGHTING_UP) {
@@ -163,8 +155,9 @@ export class Player extends Entity {
 
   render(ctx, camera) {
     const screen = camera.worldToScreen(this.x, this.y);
-    const sx = Math.floor(screen.x);
-    const sy = Math.floor(screen.y);
+    // Draw sprite above the collision box (collision box is at feet level)
+    const sx = Math.floor(screen.x) - (SPRITE_WIDTH - this.width) / 2;
+    const sy = Math.floor(screen.y) + this.getSpriteOffsetY();
     if (this.fireState === FIRE_STATE.LAYING_DOWN) { this._renderLayingDown(ctx, sx, sy); return; }
     this._renderStanding(ctx, sx, sy);
   }
