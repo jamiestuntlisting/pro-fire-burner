@@ -289,13 +289,9 @@ export class Game {
     const choice = this.mainMenu.update(dt, this.input);
     if (choice === 'NEW GAME') {
       this.levelManager.setLevel(0);
-      this.playerName = '';
-      this._nameEntryKeys = {};
-      this._nameBackspaceHeld = false;
-      this.fadeToState(STATES.NAME_ENTRY, () => {
-        this.input.startNameEntry((val) => {
-          this.playerName = val;
-        });
+      this.playerName = 'STUNTPERSON';
+      this.fadeToState(STATES.CALL_SHEET, () => {
+        this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
       });
     } else if (choice === 'HIGH SCORES') {
       this.fadeToState(STATES.HIGH_SCORE, () => {
