@@ -124,18 +124,19 @@ export class MainMenu {
     // Title
     const titleY = 120;
     ctx.fillStyle = '#ff6600';
-    ctx.font = 'bold 32px monospace';
+    ctx.font = 'bold 28px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('FIRE BURN', VIEWPORT_WIDTH / 2, titleY);
+    ctx.fillText("STUNTLISTING'S", VIEWPORT_WIDTH / 2, titleY);
     ctx.fillStyle = '#ffaa00';
-    ctx.fillText('SIMULATOR', VIEWPORT_WIDTH / 2, titleY + 40);
+    ctx.font = 'bold 36px monospace';
+    ctx.fillText('PRO FIRE BURNER', VIEWPORT_WIDTH / 2, titleY + 44);
 
     // Fire effect on title
     const flicker = Math.sin(this.timer * 8) * 2;
     ctx.fillStyle = '#ff4400';
-    ctx.font = 'bold 32px monospace';
+    ctx.font = 'bold 36px monospace';
     ctx.globalAlpha = 0.3;
-    ctx.fillText('FIRE BURN', VIEWPORT_WIDTH / 2 + flicker, titleY - 1);
+    ctx.fillText('PRO FIRE BURNER', VIEWPORT_WIDTH / 2 + flicker, titleY + 43);
     ctx.globalAlpha = 1;
 
     // Tagline
