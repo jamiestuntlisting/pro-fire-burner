@@ -1007,19 +1007,6 @@ export class Game {
     ctx.textAlign = 'center';
     ctx.fillText('ENTER YOUR NAME', cx, 140);
 
-    ctx.fillStyle = '#aa7744';
-    ctx.font = '14px monospace';
-    ctx.fillText('This will appear on the high score board', cx, 180);
-
-    if (this.playerName.length > 0) {
-      const blink = Math.sin(Date.now() / 400) > 0;
-      if (blink) {
-        ctx.fillStyle = '#44ff44';
-        ctx.font = '14px monospace';
-        ctx.fillText('PRESS ENTER TO START', cx, 310);
-      }
-    }
-
     ctx.textAlign = 'left';
   }
 

@@ -137,12 +137,16 @@ export class InputManager {
     this._mobileNameCallback = callback;
     this._mobileNameActive = true;
     this._mobileNameInput.value = '';
-    // Position and style the input
+    // Position just below the "ENTER YOUR NAME" title on canvas
+    const canvasEl = this._canvas.canvas || this._canvas;
+    const rect = canvasEl.getBoundingClientRect();
+    const scaleY = rect.height / canvasEl.height;
+    const titleY = 160; // just below the title at y=140
     this._mobileNameInput.style.position = 'absolute';
-    this._mobileNameInput.style.top = '50%';
+    this._mobileNameInput.style.top = (rect.top + window.scrollY + titleY * scaleY) + 'px';
     this._mobileNameInput.style.left = '50%';
     this._mobileNameInput.style.bottom = 'auto';
-    this._mobileNameInput.style.transform = 'translate(-50%, -50%)';
+    this._mobileNameInput.style.transform = 'translateX(-50%)';
     this._mobileNameInput.style.width = '280px';
     this._mobileNameInput.style.height = '48px';
     this._mobileNameInput.style.opacity = '1';
