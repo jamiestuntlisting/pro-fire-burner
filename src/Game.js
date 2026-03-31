@@ -531,18 +531,14 @@ export class Game {
   _spawnProducers() {
     const px = this.player.x;
     const py = this.player.y;
-    const producers = [];
     for (let i = 0; i < PRODUCER_COUNT; i++) {
       const angle = (i / PRODUCER_COUNT) * Math.PI * 2;
-      const spawnDist = TILE_SIZE * 6;
-      // Snap spawn position to tile grid
+      const spawnDist = TILE_SIZE * 8;
       let sx = Math.round((px + Math.cos(angle) * spawnDist) / TILE_SIZE) * TILE_SIZE;
       let sy = Math.round((py + Math.sin(angle) * spawnDist) / TILE_SIZE) * TILE_SIZE;
       sx = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.widthPx - TILE_SIZE * 3, sx));
       sy = Math.max(TILE_SIZE * 2, Math.min(this.tileMap.heightPx - TILE_SIZE * 3, sy));
       const producer = new Producer(sx, sy);
-      producer._pickTargetTile(this.tileMap, px, py, producers);
-      producers.push(producer);
       this.entities.push(producer);
     }
     this.camera.shake(3, 0.4);

@@ -8,13 +8,9 @@ export class Producer extends Entity {
     this.width = TILE_SIZE;
     this.height = TILE_SIZE;
 
-    this.moveSpeed = 120;
-    this.targetCol = Math.floor(x / TILE_SIZE);
-    this.targetRow = Math.floor(y / TILE_SIZE);
+    this.moveSpeed = 150;
     this.state = 'MOVING'; // MOVING or BLOCKING
-    this.blockTimer = 0;
-    this.repositionTimer = 0;
-    this.repositionInterval = randomRange(3, 6);
+    this.blockRange = 3; // stop when this many tiles from player
 
     this.animTimer = 0;
     this.animFrame = 0;
@@ -40,19 +36,36 @@ export class Producer extends Entity {
     return { col, row };
   }
 
+  // Register 3 tiles wide (arms out) — center tile + 1 on each side perpendicular to player
   _registerTiles(tileMap, playerX, playerY) {
     this._unregisterTiles();
     this._tileMap = tileMap;
     const col = Math.round(this.x / TILE_SIZE);
     const row = Math.round(this.y / TILE_SIZE);
 
-    // Check if player is standing on this tile
-    const pCol = Math.floor((playerX) / TILE_SIZE);
-    const pRow = Math.floor((playerY) / TILE_SIZE);
-    if (col === pCol && row === pRow) return; // don't trap the player
+    // Determine blocking direction (perpendicular to player direction)
+    const dx = playerX - this.getCenterX();
+    const dy = playerY - this.getCenterY();
 
-    tileMap.addDynamicSolid(col, row);
-    this._registeredTiles.push({ col, row });
+    // Block 3 tiles: center + perpendicular spread
+    // If player is mostly horizontal, spread vertically (and vice versa)
+    const tiles = [{ col, row }];
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Player is to the left/right — spread vertically
+      tiles.push({ col, row: row - 1 });
+      tiles.push({ col, row: row + 1 });
+    } else {
+      // Player is above/below — spread horizontally
+      tiles.push({ col: col - 1, row });
+      tiles.push({ col: col + 1, row });
+    }
+
+    for (const t of tiles) {
+      // Don't register on wall tiles
+      if (tileMap.getTile(t.col, t.row) === 1) continue;
+      tileMap.addDynamicSolid(t.col, t.row);
+      this._registeredTiles.push(t);
+    }
   }
 
   _unregisterTiles() {
@@ -61,51 +74,6 @@ export class Producer extends Entity {
       this._tileMap.removeDynamicSolid(t.col, t.row);
     }
     this._registeredTiles = [];
-  }
-
-  _pickTargetTile(tileMap, playerX, playerY, allProducers) {
-    const pCol = Math.floor(playerX / TILE_SIZE);
-    const pRow = Math.floor(playerY / TILE_SIZE);
-    const blockRange = 2; // tiles away from player
-
-    // 8 candidate positions around player
-    const dirs = [
-      [-1, 0], [1, 0], [0, -1], [0, 1],
-      [-1, -1], [-1, 1], [1, -1], [1, 1],
-    ];
-
-    let bestCol = pCol + blockRange;
-    let bestRow = pRow;
-    let bestDist = Infinity;
-
-    const myCol = Math.round(this.x / TILE_SIZE);
-    const myRow = Math.round(this.y / TILE_SIZE);
-
-    for (const [dx, dy] of dirs) {
-      const c = pCol + dx * blockRange;
-      const r = pRow + dy * blockRange;
-
-      // Skip wall tiles
-      if (tileMap.getTile(c, r) === 1) continue;
-
-      // Skip tiles already claimed by other producers
-      let claimed = false;
-      for (const p of allProducers) {
-        if (p === this || p.dead) continue;
-        if (p.targetCol === c && p.targetRow === r) { claimed = true; break; }
-      }
-      if (claimed) continue;
-
-      const d = Math.abs(c - myCol) + Math.abs(r - myRow); // manhattan distance
-      if (d < bestDist) {
-        bestDist = d;
-        bestCol = c;
-        bestRow = r;
-      }
-    }
-
-    this.targetCol = bestCol;
-    this.targetRow = bestRow;
   }
 
   update(dt, tileMap, playerX, playerY, allProducers) {
@@ -117,46 +85,49 @@ export class Producer extends Entity {
       this.animFrame = (this.animFrame + 1) % 4;
     }
 
-    const targetX = this.targetCol * TILE_SIZE;
-    const targetY = this.targetRow * TILE_SIZE;
+    const cx = this.getCenterX();
+    const cy = this.getCenterY();
+    const dx = playerX - cx;
+    const dy = playerY - cy;
+    const distToPlayer = Math.sqrt(dx * dx + dy * dy);
+    const closeRange = TILE_SIZE * this.blockRange;
 
-    switch (this.state) {
-      case 'MOVING': {
+    if (distToPlayer <= closeRange) {
+      // Close to player — stop, block, register as wall
+      if (this.state !== 'BLOCKING') {
+        this._snapToGrid();
+        this.state = 'BLOCKING';
+      }
+      // Re-register tiles every frame (perpendicular direction may change)
+      this._registerTiles(tileMap, playerX, playerY);
+    } else {
+      // Far from player — chase them
+      if (this.state === 'BLOCKING') {
         this._unregisterTiles();
-        const dx = targetX - this.x;
-        const dy = targetY - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 2) {
-          // Arrived at target tile
-          this._snapToGrid();
-          this.state = 'BLOCKING';
-          this.blockTimer = 0;
-          this.repositionTimer = 0;
-          this._registerTiles(tileMap, playerX, playerY);
-        } else if (dist > 0) {
-          this.x += (dx / dist) * this.moveSpeed * dt;
-          this.y += (dy / dist) * this.moveSpeed * dt;
-        }
-        break;
+        this.state = 'MOVING';
       }
 
-      case 'BLOCKING': {
-        this.blockTimer += dt;
-        this.repositionTimer += dt;
+      if (distToPlayer > 0) {
+        const speed = this.moveSpeed * dt;
+        let newX = this.x + (dx / distToPlayer) * speed;
+        let newY = this.y + (dy / distToPlayer) * speed;
 
-        // Re-register tiles each frame (handles player moving away)
-        this._registerTiles(tileMap, playerX, playerY);
-
-        // Periodically pick a new target closer to the player
-        if (this.repositionTimer >= this.repositionInterval) {
-          this.repositionTimer = 0;
-          this.repositionInterval = randomRange(3, 6);
-          this._unregisterTiles();
-          this._pickTargetTile(tileMap, playerX, playerY, allProducers || []);
-          this.state = 'MOVING';
+        // Don't walk into walls
+        const testX = newX + this.width / 2;
+        const testY = newY + this.height / 2;
+        if (tileMap && tileMap.isSolid(testX, testY)) {
+          // Try just X
+          if (!tileMap.isSolid(newX + this.width / 2, this.y + this.height / 2)) {
+            this.x = newX;
+          }
+          // Try just Y
+          if (!tileMap.isSolid(this.x + this.width / 2, newY + this.height / 2)) {
+            this.y = newY;
+          }
+        } else {
+          this.x = newX;
+          this.y = newY;
         }
-        break;
       }
     }
   }
