@@ -21,14 +21,16 @@ export const TICK_RATE = 1 / 60;
 
 // End state reasons
 export const END_REASONS = {
-  BURNED: { message: 'YOU BURNED!', icon: '🔥', isGameOver: true, priority: 2 },
-  LOST_THE_SHOT: { message: 'LOST THE SHOT!', icon: '🎬', isGameOver: true, priority: 4 },
-  ROADKILL: { message: 'ROADKILL!', icon: '🚗', isGameOver: true, priority: 3 },
-  PA_ATTACK: { message: 'PA ATTACK!', icon: '📋', isGameOver: true, priority: 1 },
-  CLEAN_BURN: { message: 'CLEAN BURN!', icon: '⭐', isGameOver: false, priority: 7 },
-  SAFE_OUT: { message: 'SAFE OUT!', icon: '👍', isGameOver: false, priority: 8 },
-  EXTINGUISHED: { message: 'EXTINGUISHED!', icon: '❄️', isGameOver: false, priority: 5 },
-  FELL_IN_WATER: { message: 'FELL IN WATER!', icon: '💦', isGameOver: false, priority: 6 },
+  BURNED: { message: 'YOU BURNED!', subtitle: 'Ran out of protective gel!', icon: '🔥', isGameOver: true, priority: 2 },
+  BURNED_NO_FUEL: { message: 'FLAME OUT!', subtitle: 'Ran out of fuel!', icon: '💨', isGameOver: true, priority: 2 },
+  BURNED_EXTINGUISHED: { message: 'EXTINGUISHED!', subtitle: 'Fire safeties put you out!', icon: '🧯', isGameOver: true, priority: 2 },
+  LOST_THE_SHOT: { message: 'LOST THE SHOT!', subtitle: 'Stayed off camera too long!', icon: '🎬', isGameOver: true, priority: 4 },
+  ROADKILL: { message: 'ROADKILL!', subtitle: 'Hit by the camera car!', icon: '🚗', isGameOver: true, priority: 3 },
+  PA_ATTACK: { message: 'PA ATTACK!', subtitle: 'Set a principal on fire!', icon: '📋', isGameOver: true, priority: 1 },
+  CLEAN_BURN: { message: 'CLEAN BURN!', subtitle: 'Perfect fuel management!', icon: '⭐', isGameOver: false, priority: 7 },
+  SAFE_OUT: { message: 'SAFE OUT!', subtitle: 'Safely extinguished!', icon: '👍', isGameOver: false, priority: 8 },
+  EXTINGUISHED: { message: 'EXTINGUISHED!', subtitle: 'Fire safeties got you!', icon: '❄️', isGameOver: false, priority: 5 },
+  FELL_IN_WATER: { message: 'FELL IN WATER!', subtitle: 'Walked into water!', icon: '💦', isGameOver: false, priority: 6 },
 };
 
 // Tile types

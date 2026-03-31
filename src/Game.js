@@ -49,6 +49,8 @@ const STATES = {
 
 const END_ANIMS = {
   BURNED: { duration: 1.5, label: 'BURNED UP!' },
+  BURNED_NO_FUEL: { duration: 1.5, label: 'FLAME OUT!' },
+  BURNED_EXTINGUISHED: { duration: 1.5, label: 'EXTINGUISHED!' },
   EXTINGUISHED: { duration: 1.5, label: 'PUT OUT!' },
   FELL_IN_WATER: { duration: 1.5, label: 'FELL IN WATER!' },
   ROADKILL: { duration: 1.2, label: 'ROADKILL!' },
@@ -246,7 +248,7 @@ export class Game {
       this.camera.shake(3, 0.3);
     }
 
-    if (reason === 'EXTINGUISHED' || reason === 'FELL_IN_WATER' || reason === 'SAFE_OUT') {
+    if (reason === 'EXTINGUISHED' || reason === 'BURNED_EXTINGUISHED' || reason === 'FELL_IN_WATER' || reason === 'SAFE_OUT') {
       this.player.extinguish();
       this.soundManager.playExtinguish();
     }
@@ -464,9 +466,9 @@ export class Game {
     this._checkFireSpread(px, py);
 
     if (this.player.gel <= 0) {
-      this.endLevel('BURNED');
+      this.endLevel(this._beingSprayedByFireSafety ? 'BURNED_EXTINGUISHED' : 'BURNED');
     } else if (this.player.fuel <= 0) {
-      this.endLevel('CLEAN_BURN');
+      this.endLevel(this._beingSprayedByFireSafety ? 'BURNED_EXTINGUISHED' : 'BURNED_NO_FUEL');
     }
 
     if (this.collisionSystem.isOnWater(this.player) && this.player.isOnFire()) {
@@ -586,6 +588,7 @@ export class Game {
   _checkPlayingCollisions(dt) {
     const px = this.player.getCenterX();
     const py = this.player.getCenterY();
+    this._beingSprayedByFireSafety = false;
 
     let pendingEnd = null;
     let pendingPriority = 99;
@@ -606,6 +609,7 @@ export class Game {
           this.player.fuel = Math.max(0, this.player.fuel);
           this.player.gel -= entity.fuelDrainRate * 0.3 * dt;
           this.player.gel = Math.max(0, this.player.gel);
+          this._beingSprayedByFireSafety = true;
         }
       }
     }
@@ -725,6 +729,7 @@ export class Game {
 
     switch (this.endReason) {
       case 'BURNED':
+      case 'BURNED_NO_FUEL':
         if (Math.random() < 0.3) {
           this.particles.emitBurst(px + (Math.random() - 0.5) * 30, py, 1, {
             r: 80, g: 80, b: 80, life: 1.0, spread: 24, vy: -90,
@@ -732,6 +737,7 @@ export class Game {
         }
         if (t > 0.5 && t < 0.6) this.player.extinguish();
         break;
+      case 'BURNED_EXTINGUISHED':
       case 'EXTINGUISHED':
         if (Math.random() < 0.4) {
           this.particles.emitBurst(px + (Math.random() - 0.5) * 24, py - 15, 1, {

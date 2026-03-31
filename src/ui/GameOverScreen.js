@@ -117,7 +117,14 @@ export class GameOverScreen {
     ctx.textAlign = 'center';
     ctx.fillStyle = info.isGameOver ? '#ff4444' : '#44ff44';
     ctx.font = 'bold 28px monospace';
-    ctx.fillText(`${info.icon} ${info.message}`, cx, 70);
+    ctx.fillText(`${info.icon} ${info.message}`, cx, 60);
+
+    // Subtitle - reason why
+    if (info.subtitle) {
+      ctx.fillStyle = info.isGameOver ? '#cc8888' : '#88cc88';
+      ctx.font = '14px monospace';
+      ctx.fillText(info.subtitle, cx, 84);
+    }
 
     // Paycheck stub
     ctx.fillStyle = '#f0e8d0';
