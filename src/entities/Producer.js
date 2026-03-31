@@ -8,7 +8,7 @@ export class Producer extends Entity {
     this.width = TILE_SIZE;
     this.height = TILE_SIZE;
 
-    this.moveSpeed = 150;
+    this.moveSpeed = 300;
     this.state = 'MOVING'; // MOVING or BLOCKING
     this.blockRange = 3; // stop when this many tiles from player
 
@@ -143,12 +143,13 @@ export class Producer extends Entity {
 
     ctx.save();
 
-    // Scale to fill the tile
-    const scale = TILE_SIZE / 24; // base sprite is 24px wide
-    const drawOffsetX = (this.width - 24 * scale) / 2;
-    const drawOffsetY = (this.height - 48 * scale);
+    // Scale: full width to fill tile, half height for squat look
+    const scaleX = TILE_SIZE / 24; // base sprite is 24px wide
+    const scaleY = scaleX * 0.5;   // half as tall
+    const drawOffsetX = (this.width - 24 * scaleX) / 2;
+    const drawOffsetY = -50 + (this.height - 48 * scaleY); // shift hitbox down 50px
     ctx.translate(baseX + drawOffsetX, baseY + drawOffsetY);
-    ctx.scale(scale, scale);
+    ctx.scale(scaleX, scaleY);
 
     const sx = 0;
     const sy = 0;
