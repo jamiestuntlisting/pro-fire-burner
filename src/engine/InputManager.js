@@ -139,10 +139,10 @@ export class InputManager {
     this._mobileNameInput.value = '';
     // Make input visible enough for browser to allow keyboard
     this._mobileNameInput.style.position = 'absolute';
-    this._mobileNameInput.style.bottom = '10px';
+    this._mobileNameInput.style.top = '50%';
     this._mobileNameInput.style.left = '50%';
-    this._mobileNameInput.style.top = 'auto';
-    this._mobileNameInput.style.transform = 'translateX(-50%)';
+    this._mobileNameInput.style.bottom = 'auto';
+    this._mobileNameInput.style.transform = 'translate(-50%, -50%)';
     this._mobileNameInput.style.width = '280px';
     this._mobileNameInput.style.height = '44px';
     this._mobileNameInput.style.opacity = '1';
