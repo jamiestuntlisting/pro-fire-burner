@@ -22,6 +22,7 @@ export class CollisionSystem {
 
   // Check entity against solid tiles, returns corrected position
   // Uses foot hitbox if entity has getFootBounds() (for tall sprites in top-down view)
+  // Includes corner correction to prevent snagging on tile corners
   resolveEntityTile(entity, newX, newY) {
     if (!this.tileMap) return { x: newX, y: newY };
 
@@ -43,14 +44,43 @@ export class CollisionSystem {
       h = entity.height;
     }
 
-    // Try X movement — test foot position at new X
-    if (this._collidesWithWall(resolvedX + offX, entity.y + offY, w, h)) {
-      resolvedX = entity.x;
-    }
+    const curOffX = entity.x + offX;
+    const curOffY = entity.y + offY;
 
-    // Try Y movement — test foot position at new Y
-    if (this._collidesWithWall(resolvedX + offX, resolvedY + offY, w, h)) {
-      resolvedY = entity.y;
+    // Try X movement
+    const xBlocked = this._collidesWithWall(resolvedX + offX, curOffY, w, h);
+    if (xBlocked) resolvedX = entity.x;
+
+    // Try Y movement
+    const yBlocked = this._collidesWithWall(resolvedX + offX, resolvedY + offY, w, h);
+    if (yBlocked) resolvedY = entity.y;
+
+    // Corner correction: if one axis was blocked, try nudging on the other
+    // to slide past tile corners the hitbox barely clips
+    const nudge = 3;
+    if (xBlocked && !yBlocked) {
+      // Trying to move X but blocked — try nudging Y to slide past corner
+      const fx = resolvedX + offX; // still at old X
+      const fy = curOffY;
+      // Check if nudging up or down un-blocks the X movement
+      if (!this._collidesWithWall(newX + offX, fy - nudge, w, h)) {
+        resolvedY -= nudge;
+        resolvedX = newX;
+      } else if (!this._collidesWithWall(newX + offX, fy + nudge, w, h)) {
+        resolvedY += nudge;
+        resolvedX = newX;
+      }
+    } else if (yBlocked && !xBlocked) {
+      // Trying to move Y but blocked — try nudging X to slide past corner
+      const fx = resolvedX + offX;
+      const fy = resolvedY + offY; // still at old Y
+      if (!this._collidesWithWall(fx - nudge, newY + offY, w, h)) {
+        resolvedX -= nudge;
+        resolvedY = newY;
+      } else if (!this._collidesWithWall(fx + nudge, newY + offY, w, h)) {
+        resolvedX += nudge;
+        resolvedY = newY;
+      }
     }
 
     return { x: resolvedX, y: resolvedY };
