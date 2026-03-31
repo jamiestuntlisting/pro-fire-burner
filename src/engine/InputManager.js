@@ -131,22 +131,22 @@ export class InputManager {
     }
   }
 
-  // Focus the hidden text input to bring up mobile keyboard for name entry
-  startMobileNameEntry(callback) {
+  // Show the name entry input field and focus it
+  startNameEntry(callback) {
     if (!this._mobileNameInput) return;
     this._mobileNameCallback = callback;
     this._mobileNameActive = true;
     this._mobileNameInput.value = '';
-    // Make input visible enough for browser to allow keyboard
+    // Position and style the input
     this._mobileNameInput.style.position = 'absolute';
     this._mobileNameInput.style.top = '50%';
     this._mobileNameInput.style.left = '50%';
     this._mobileNameInput.style.bottom = 'auto';
     this._mobileNameInput.style.transform = 'translate(-50%, -50%)';
     this._mobileNameInput.style.width = '280px';
-    this._mobileNameInput.style.height = '44px';
+    this._mobileNameInput.style.height = '48px';
     this._mobileNameInput.style.opacity = '1';
-    this._mobileNameInput.style.fontSize = '20px';
+    this._mobileNameInput.style.fontSize = '24px';
     this._mobileNameInput.style.textAlign = 'center';
     this._mobileNameInput.style.background = '#1a1a2a';
     this._mobileNameInput.style.color = '#ffcc00';
@@ -155,18 +155,27 @@ export class InputManager {
     this._mobileNameInput.style.fontFamily = 'monospace';
     this._mobileNameInput.style.zIndex = '200';
     this._mobileNameInput.style.letterSpacing = '4px';
-    // Focus immediately - will work if triggered from user gesture
+    this._mobileNameInput.style.outline = 'none';
     this._mobileNameInput.focus();
 
-    // Also focus on any tap (in case first focus didn't trigger keyboard)
-    this._mobileNameTapHandler = () => {
+    // Focus on any tap or click (for mobile keyboard)
+    this._nameEntryFocusHandler = () => {
       if (this._mobileNameActive) {
         this._mobileNameInput.focus();
       }
     };
-    document.addEventListener('touchstart', this._mobileNameTapHandler);
+    document.addEventListener('touchstart', this._nameEntryFocusHandler);
+    document.addEventListener('click', this._nameEntryFocusHandler);
 
-    // Remove old listener if any, add fresh one
+    // Handle enter key inside the input to submit
+    this._nameEntryKeyHandler = (e) => {
+      if (e.key === 'Enter' && this._mobileNameActive) {
+        this.enterJustPressed = true;
+      }
+    };
+    this._mobileNameInput.addEventListener('keydown', this._nameEntryKeyHandler);
+
+    // Filter input to uppercase letters only
     this._mobileNameInputHandler = () => {
       const val = this._mobileNameInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10);
       this._mobileNameInput.value = val;
@@ -177,7 +186,12 @@ export class InputManager {
     this._mobileNameInput.addEventListener('input', this._mobileNameInputHandler);
   }
 
-  endMobileNameEntry() {
+  // Keep old name for backwards compat
+  startMobileNameEntry(callback) {
+    this.startNameEntry(callback);
+  }
+
+  endNameEntry() {
     this._mobileNameActive = false;
     if (this._mobileNameInput) {
       this._mobileNameInput.blur();
@@ -192,10 +206,18 @@ export class InputManager {
       if (this._mobileNameInputHandler) {
         this._mobileNameInput.removeEventListener('input', this._mobileNameInputHandler);
       }
+      if (this._nameEntryKeyHandler) {
+        this._mobileNameInput.removeEventListener('keydown', this._nameEntryKeyHandler);
+      }
     }
-    if (this._mobileNameTapHandler) {
-      document.removeEventListener('touchstart', this._mobileNameTapHandler);
+    if (this._nameEntryFocusHandler) {
+      document.removeEventListener('touchstart', this._nameEntryFocusHandler);
+      document.removeEventListener('click', this._nameEntryFocusHandler);
     }
+  }
+
+  endMobileNameEntry() {
+    this.endNameEntry();
   }
 
   getMobileNameValue() {

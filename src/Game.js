@@ -291,7 +291,7 @@ export class Game {
       this._nameEntryKeys = {};
       this._nameBackspaceHeld = false;
       this.fadeToState(STATES.NAME_ENTRY, () => {
-        this.input.startMobileNameEntry((val) => {
+        this.input.startNameEntry((val) => {
           this.playerName = val;
         });
       });
@@ -307,33 +307,10 @@ export class Game {
 
   _updateNameEntry(dt) {
     this.input.setGameControlsVisible(false);
-
-    if (this.input._mobileNameActive) {
-      this.playerName = this.input.getMobileNameValue();
-    } else {
-      for (const [code, pressed] of Object.entries(this.input.keys)) {
-        if (pressed && code.startsWith('Key') && this.playerName.length < 10) {
-          const letter = code.replace('Key', '');
-          if (!this._nameEntryKeys[code]) {
-            this.playerName += letter;
-          }
-          this._nameEntryKeys[code] = true;
-        } else if (!pressed) {
-          this._nameEntryKeys[code] = false;
-        }
-      }
-      if (this.input.keys['Backspace']) {
-        if (!this._nameBackspaceHeld) {
-          this.playerName = this.playerName.slice(0, -1);
-          this._nameBackspaceHeld = true;
-        }
-      } else {
-        this._nameBackspaceHeld = false;
-      }
-    }
+    this.playerName = this.input.getMobileNameValue();
 
     if (this.input.enterJustPressed && this.playerName.length > 0) {
-      this.input.endMobileNameEntry();
+      this.input.endNameEntry();
       this.fadeToState(STATES.CALL_SHEET, () => {
         this.callSheet.setLevel(this.levelManager.getCurrentLevelConfig());
       });
@@ -1034,35 +1011,13 @@ export class Game {
     ctx.font = '14px monospace';
     ctx.fillText('This will appear on the high score board', cx, 180);
 
-    if (!this.input._mobileNameActive) {
-      ctx.fillStyle = '#1a1a2a';
-      ctx.fillRect(cx - 140, 220, 280, 48);
-      ctx.strokeStyle = '#ff6600';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx - 140, 220, 280, 48);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px monospace';
-      const cursor = Math.sin(Date.now() / 300) > 0 ? '_' : '';
-      ctx.fillText(this.playerName + cursor, cx, 252);
-    } else {
-      ctx.fillStyle = '#ffcc00';
-      ctx.font = 'bold 28px monospace';
-      ctx.fillText(this.playerName, cx, 250);
-    }
-
     if (this.playerName.length > 0) {
       const blink = Math.sin(Date.now() / 400) > 0;
       if (blink) {
         ctx.fillStyle = '#44ff44';
         ctx.font = '14px monospace';
-        const hintText = this.input._mobileNameActive ? 'TAP SCREEN TO START' : 'CLICK OR PRESS ENTER TO START';
-        ctx.fillText(hintText, cx, 310);
+        ctx.fillText('PRESS ENTER TO START', cx, 310);
       }
-    } else {
-      ctx.fillStyle = '#aa7744';
-      ctx.font = '14px monospace';
-      ctx.fillText(this.input._mobileNameActive ? 'TYPE YOUR NAME BELOW' : 'TYPE YOUR NAME', cx, 310);
     }
 
     ctx.textAlign = 'left';
