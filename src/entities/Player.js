@@ -101,7 +101,7 @@ export class Player extends Entity {
   getFootCenterY() { return this.getCenterY(); }
 
   // Visual offset: how far above the collision box to draw the sprite
-  getSpriteOffsetY() { return -(SPRITE_HEIGHT - this.height); }
+  getSpriteOffsetY() { return -(SPRITE_HEIGHT - this.height) - 12; }
 
   getFlameIntensity() {
     if (this.fireState === FIRE_STATE.LIGHTING_UP) {
