@@ -91,6 +91,20 @@ export class Player extends Entity {
   getFeetX() { return this.x + this.width / 2; }
   getFeetY() { return this.y + this.height; }
 
+  // Foot hitbox for tile/wall collisions (bottom portion of sprite)
+  getFootBounds() {
+    const footHeight = 16;
+    return {
+      x: this.x + 2,
+      y: this.y + this.height - footHeight,
+      width: this.width - 4,
+      height: footHeight,
+      // Offsets from entity origin for collision resolution
+      offsetX: 2,
+      offsetY: this.height - footHeight,
+    };
+  }
+
   getFlameIntensity() {
     if (this.fireState === FIRE_STATE.LIGHTING_UP) {
       return this.getLightUpProgress() * 0.5;

@@ -21,19 +21,35 @@ export class CollisionSystem {
   }
 
   // Check entity against solid tiles, returns corrected position
+  // Uses foot hitbox if entity has getFootBounds() (for tall sprites in top-down view)
   resolveEntityTile(entity, newX, newY) {
     if (!this.tileMap) return { x: newX, y: newY };
 
     let resolvedX = newX;
     let resolvedY = newY;
 
-    // Try X movement
-    if (this._collidesWithWall(resolvedX, entity.y, entity.width, entity.height)) {
+    // Use foot hitbox if available (player), otherwise full bounds
+    const hasFootBounds = typeof entity.getFootBounds === 'function';
+    let offX = 0, offY = 0, w, h;
+
+    if (hasFootBounds) {
+      const foot = entity.getFootBounds();
+      offX = foot.offsetX;
+      offY = foot.offsetY;
+      w = foot.width;
+      h = foot.height;
+    } else {
+      w = entity.width;
+      h = entity.height;
+    }
+
+    // Try X movement — test foot position at new X
+    if (this._collidesWithWall(resolvedX + offX, entity.y + offY, w, h)) {
       resolvedX = entity.x;
     }
 
-    // Try Y movement
-    if (this._collidesWithWall(resolvedX, resolvedY, entity.width, entity.height)) {
+    // Try Y movement — test foot position at new Y
+    if (this._collidesWithWall(resolvedX + offX, resolvedY + offY, w, h)) {
       resolvedY = entity.y;
     }
 
@@ -41,7 +57,7 @@ export class CollisionSystem {
   }
 
   _collidesWithWall(x, y, w, h) {
-    // Check all four corners plus midpoints
+    // Check corners plus midpoints of the hitbox
     const margin = 1;
     const points = [
       { x: x + margin, y: y + margin },
